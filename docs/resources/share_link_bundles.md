@@ -4,7 +4,7 @@ Share link bundles group multiple documents into a single shareable archive. The
 
 ## Models
 
-See [`pypaperless/models/share_links/bundle.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/share_links/bundle.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/share_links/bundle.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/share_links/bundle.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 
@@ -25,16 +25,24 @@ async for bundle in paperless.share_link_bundles:
 
 ## Create
 
+`save()` calls `validate_draft()` first — only `document_ids` is required.
+`file_version` and `expiration_days` are optional:
+
 ```python
 from pypaperless.models.share_links import ShareLinkFileVersion
 
 draft = paperless.share_link_bundles.create(
     document_ids=[42, 43],
     file_version=ShareLinkFileVersion.ARCHIVE,
+    expiration_days=7,
 )
 bundle_id = int(await paperless.share_link_bundles.save(draft))
 print(bundle_id)  # 3
 ```
+
+!!! note
+    The draft takes `document_ids` and `expiration_days`, while the created
+    `ShareLinkBundle` exposes `documents` and an absolute `expiration` timestamp.
 
 ## Rebuild
 

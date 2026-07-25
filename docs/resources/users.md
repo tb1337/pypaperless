@@ -4,7 +4,7 @@ Users are the Paperless-ngx user accounts. They are read-only from the API persp
 
 ## Model
 
-See [`pypaperless/models/permissions/users.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/permissions/users.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/permissions/users.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/permissions/users.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 

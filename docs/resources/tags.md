@@ -4,7 +4,7 @@ Tags are labels that can be applied to documents for classification and filterin
 
 ## Models
 
-See [`pypaperless/models/tags.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/tags.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/tags.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/tags.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 
@@ -28,11 +28,34 @@ inbox = next(
 )
 ```
 
+## Tag hierarchy
+
+Tags can be nested. `parent` holds the parent tag's id (`None` for a top-level tag) and
+`children` holds the nested tags as full `Tag` instances:
+
+```python
+tag = await paperless.tags(5)
+print(tag.parent)                 # 2, or None for a root tag
+
+for child in tag.children or []:
+    print(child.id, child.name)
+```
+
+Use the `is_root` filter to iterate only top-level tags:
+
+```python
+async with paperless.tags.filter(is_root=True) as ctx:
+    async for tag in ctx:
+        print(tag.name, len(tag.children or []))
+```
+
+Assign a parent when creating a tag by passing `parent=` to `create()`.
+
 ## Create
 
 `save()` calls `validate_draft()` first — all of `name`, `color`, `is_inbox_tag`,
 `match`, `matching_algorithm` and `is_insensitive` are required and raise
-`DraftFieldRequiredError` if missing.
+`DraftFieldRequiredError` if missing. `parent` and `text_color` are optional.
 
 ```python
 from pypaperless.models.types import MatchingAlgorithm

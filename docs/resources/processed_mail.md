@@ -4,7 +4,7 @@ The `processed_mail` resource is a read-only log of emails that have already bee
 
 ## Model
 
-See [`pypaperless/models/mails/processed.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/mails/processed.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/mails/processed.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/mails/processed.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 

@@ -4,7 +4,7 @@ Tasks represent Celery background jobs - primarily document consumption jobs. Yo
 
 ## Model
 
-See [`pypaperless/models/tasks.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/tasks.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/tasks.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/tasks.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch by UUID
 
@@ -58,7 +58,7 @@ pending = [t async for t in paperless.tasks if t.status == "pending"]
 
 ## Filter
 
-`filter()` is an async context manager - apply server-side filters within `async with` and iterate over the yielded `ctx`. See [`TaskFilters`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/filters.py) for all keys.
+`filter()` is an async context manager - apply server-side filters within `async with` and iterate over the yielded `ctx`. See [`TaskFilters`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/filters.py) for all keys.
 
 ```python
 from pypaperless.models.tasks import TaskStatus, TaskType

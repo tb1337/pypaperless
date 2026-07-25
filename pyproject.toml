@@ -48,9 +48,9 @@ docs = [
 
 [project.urls]
 "Homepage" = "https://pypaperless.docs.tbsch.de"
-"Source Code" = "https://github.com/tb1337/paperless-api"
-"Bug Reports" = "https://github.com/tb1337/paperless-api/issues"
-"Coverage" = "https://codecov.io/gh/tb1337/paperless-api"
+"Source Code" = "https://github.com/tb1337/pypaperless"
+"Bug Reports" = "https://github.com/tb1337/pypaperless/issues"
+"Coverage" = "https://codecov.io/gh/tb1337/pypaperless"
 
 [tool.codespell]
 skip = "./site,./uv.lock"

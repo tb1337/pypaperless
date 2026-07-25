@@ -4,7 +4,7 @@ The `config` resource exposes the Paperless-ngx application configuration. It is
 
 ## Model
 
-See [`pypaperless/models/config.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/config.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/config.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/config.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch
 

@@ -9,8 +9,8 @@ site_url = "https://pypaperless.docs.tbsch.de"
 
 copyright = "Copyright &copy; 2024 - 2026 <a href=\"https://tbsch.de\" target=\"_blank\" rel=\"noopener\">Tobias Schulz</a>"
 
-repo_url = "https://github.com/tb1337/paperless-api"
-repo_name = "tb1337/paperless-api"
+repo_url = "https://github.com/tb1337/pypaperless"
+repo_name = "tb1337/pypaperless"
 
 edit_uri = "blob/main/docs/"
 
@@ -110,7 +110,7 @@ toggle.name = "Switch to system preference"
 # ----------------------------------------------------------------------------
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/tb1337/paperless-api"
+link = "https://github.com/tb1337/pypaperless"
 
 [[project.extra.social]]
 icon = "lucide/globe"

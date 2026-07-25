@@ -133,6 +133,100 @@ print(suggestions.storage_paths)
 print(suggestions.dates)
 ```
 
+These are the classifier's rule-based suggestions and resolve to existing object IDs.
+
+### AI suggestions
+
+`ai_suggestions()` is a separate endpoint backed by the LLM configured on the server
+(`config.ai_enabled` must be on). Alongside ID lists it returns *names* for objects
+that do not exist yet, so you can create them before assigning:
+
+```python
+ai = await paperless.documents.ai_suggestions(42)
+
+print(ai.title)                       # suggested document title
+print(ai.tags)                        # [1, 5]  - existing tag IDs
+print(ai.suggested_tags)              # ["Insurance"] - names not yet in Paperless
+print(ai.correspondents)
+print(ai.suggested_correspondents)
+print(ai.document_types, ai.suggested_document_types)
+print(ai.storage_paths, ai.suggested_storage_paths)
+print(ai.dates)
+
+# or via a fetched document (pk bound automatically)
+doc = await paperless.documents(42)
+ai = await doc.ai_suggestions()
+```
+
+---
+
+## Chat
+
+`documents.chat` sends a natural-language question to the LLM configured on the
+Paperless-ngx server. Pass a document pk as the second argument to scope the
+question to a single document, or omit it for an unscoped query:
+
+```python
+response = await paperless.documents.chat("What is this invoice about?", 42)
+print(response.q)            # "What is this invoice about?" - echoed by the server
+print(response.document_id)  # 42
+
+# unscoped
+response = await paperless.documents.chat("Which contracts expire this year?")
+```
+
+!!! warning "The answer is streamed, not returned"
+    Upstream this is a streaming endpoint, and its documented JSON response contains
+    only the echoed `q` and `document_id` — which is exactly what `DocumentChat`
+    exposes. `chat()` therefore confirms the query was accepted; it does **not**
+    give you the generated answer text.
+
+!!! note
+    Requires AI to be enabled server-side, and `q` is capped at 4000 characters. Check
+    `(await paperless.config()).ai_enabled` before relying on `chat` or `ai_suggestions`.
+
+---
+
+## Document versions
+
+A document can hold several file versions. `documents.versions` uploads, relabels and
+removes them; `documents.root` reports which document is the root of a version chain.
+
+```python
+# upload a new version of document 42
+with open("invoice-v2.pdf", "rb") as fh:
+    await paperless.documents.versions.upload(fh, version_label="v2", pk=42)
+
+# relabel an existing version - returns the updated DocumentVersionInfo
+info = await paperless.documents.versions.update(1, version_label="final", pk=42)
+print(info.version_label, info.checksum, info.is_root)
+
+# delete a version
+await paperless.documents.versions.delete(1, pk=42)
+
+# which document is the root of this chain?
+root = await paperless.documents.root(42)
+print(root.root_id)
+```
+
+Via a fetched document the pk is bound automatically, so `pk=` can be omitted:
+
+```python
+doc = await paperless.documents(42)
+
+with open("invoice-v2.pdf", "rb") as fh:
+    await doc.versions.upload(fh, version_label="v2")
+
+await doc.versions.delete(1)
+root = await doc.root()
+```
+
+!!! note
+    `doc.versions` is not callable - it has no `__call__`, only `upload()`, `update()`
+    and `delete()`. The version list the API embeds in a document response is parsed
+    into `doc.versions_` (a `list[DocumentVersionInfo]`), and `doc.root_document` holds
+    the root document's pk.
+
 ---
 
 ## Notes
@@ -474,7 +568,44 @@ await paperless.documents.bulk_edit.merge(
     [10, 11, 12],
     metadata_document_id=10,   # whose metadata to use for the result
     delete_originals=True,     # move source documents to trash after merging
+    archive_fallback=False,    # fall back to the archived file if no original exists
 )
+```
+
+### PDF operations
+
+`edit_pdf()` applies page-level operations to **one** document - the API accepts only a
+single document per request. Each operation needs a `page` key; `rotate` and `doc` are
+optional:
+
+```python
+await paperless.documents.bulk_edit.edit_pdf(
+    42,
+    operations=[{"page": 1, "rotate": 90}, {"page": 3}],
+    delete_original=False,     # move the source document to trash afterwards
+    update_document=False,     # True updates in place instead of creating a new document
+    include_metadata=True,     # carry metadata over to the result
+)
+```
+
+`remove_password()` decrypts password-protected PDFs:
+
+```python
+await paperless.documents.bulk_edit.remove_password(
+    [5, 6],
+    password="secret",
+    update_document=True,
+)
+```
+
+### Choosing the source file
+
+`rotate()`, `merge()`, `edit_pdf()` and `remove_password()` all accept `source_mode`,
+which selects the file the operation reads from - `"latest_version"` (default) or
+`"original"`:
+
+```python
+await paperless.documents.bulk_edit.rotate([1, 2], 90, source_mode="original")
 ```
 
 All bulk edit operations raise `BulkEditError` (a `ResponseError` subclass) when the API returns a non-OK result.

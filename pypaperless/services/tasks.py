@@ -75,7 +75,7 @@ class TaskService(
 
         Example::
 
-            async for task in await paperless.tasks.active():
+            async for task in paperless.tasks.active():
                 print(task.task_id, task.status)
 
         """

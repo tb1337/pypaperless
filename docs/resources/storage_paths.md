@@ -4,7 +4,7 @@ Storage paths define directory templates that control where Paperless-ngx stores
 
 ## Models
 
-See [`pypaperless/models/storage_paths.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/storage_paths.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/storage_paths.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/storage_paths.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 

@@ -4,7 +4,7 @@ The `status` resource reports the health of the Paperless-ngx server - database 
 
 ## Model
 
-See [`pypaperless/models/status.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/status.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/status.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/status.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch
 

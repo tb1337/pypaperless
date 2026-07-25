@@ -69,7 +69,7 @@ The valid operators depend on the field's data type:
 | `DOCUMENT_LINK`                      | `contains`                            |
 
 The full operator set is enumerated in
-[`builders/custom_fields.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/builders/custom_fields.py)
+[`builders/custom_fields.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/builders/custom_fields.py)
 as the `_QueryOperation` literal — those are the only values the type
 checker accepts as the second argument to `CustomFieldQuery(...)`.
 
