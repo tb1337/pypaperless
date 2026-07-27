@@ -1017,7 +1017,7 @@ class TestDocumentVersionService:
     async def test_upload_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
-        """upload() POSTs multipart data and returns None."""
+        """upload() POSTs the file as multipart and omits version_label when not given."""
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_UPDATE_VERSION}".format(pk=1),
@@ -1027,6 +1027,13 @@ class TestDocumentVersionService:
 
         result = await paperless.documents.versions.upload(io.BytesIO(b"data"), pk=1)
         assert result is None
+
+        request = httpx_mock.get_requests()[-1]
+        assert request.headers["content-type"].startswith("multipart/form-data")
+        body = request.content.decode(errors="replace")
+        assert 'name="document"' in body
+        assert "\r\n\r\ndata\r\n" in body
+        assert 'name="version_label"' not in body
 
     async def test_upload_with_label_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
@@ -1043,6 +1050,9 @@ class TestDocumentVersionService:
             io.BytesIO(b"data"), version_label="v2", pk=1
         )
         assert result is None
+
+        body = httpx_mock.get_requests()[-1].content.decode(errors="replace")
+        assert re.search(r'name="version_label"\r\n\r\nv2\r\n', body) is not None
 
     async def test_update_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient

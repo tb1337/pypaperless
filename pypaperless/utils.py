@@ -52,6 +52,10 @@ class _FormDataBuilder:
                 self._add(name, item)
         elif isinstance(value, tuple | bytes):
             self._add_file(name, value)
+        elif hasattr(value, "read"):
+            # file-like objects go to httpx as-is; stringifying them would upload
+            # the object's repr instead of its content
+            self._files.append((name, value))
         else:
             self._add_scalar(name, value)
 
