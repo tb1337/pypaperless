@@ -100,6 +100,7 @@ target-version = "py313"
 [tool.ruff.lint]
 ignore = [
   "ANN401", # Opinioated warning on disallowing dynamically typed expressions
+  "CPY001", # Eh what? Disable that annoying one.
   "D203", # Conflicts with other rules
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions
