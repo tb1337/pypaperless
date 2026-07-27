@@ -14,8 +14,8 @@ The primary use-case is monitoring a document upload by its task UUID:
 # task_uuid was returned by paperless.documents.save(draft)
 task = await paperless.tasks(task_uuid)
 
-print(task.status)                 # TaskStatus.PENDING / STARTED / SUCCESS / FAILURE
-print(task.related_document_ids)   # [42]  - list of document pks once finished
+print(task.status)  # TaskStatus.PENDING / STARTED / SUCCESS / FAILURE
+print(task.related_document_ids)  # [42]  - list of document pks once finished
 ```
 
 ## Fetch by primary key

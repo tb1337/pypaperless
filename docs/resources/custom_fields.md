@@ -10,7 +10,7 @@ See [`pypaperless/models/custom_fields.py`](https://github.com/tb1337/paperless-
 
 ```python
 field = await paperless.custom_fields(3)
-print(field.name)       # "Invoice amount"
+print(field.name)  # "Invoice amount"
 print(field.data_type)  # CustomFieldType.MONETARY
 ```
 

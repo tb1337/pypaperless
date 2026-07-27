@@ -10,10 +10,10 @@ See [`pypaperless/models/share_links/bundle.py`](https://github.com/tb1337/paper
 
 ```python
 bundle = await paperless.share_link_bundles(3)
-print(bundle.slug)          # "xyz789abc"
-print(bundle.status)        # ShareLinkBundleStatus.READY
-print(bundle.documents)     # [42, 43]
-print(bundle.size_bytes)    # 204800
+print(bundle.slug)  # "xyz789abc"
+print(bundle.status)  # ShareLinkBundleStatus.READY
+print(bundle.documents)  # [42, 43]
+print(bundle.size_bytes)  # 204800
 ```
 
 ## Iterate

@@ -10,8 +10,8 @@ See [`pypaperless/models/tags.py`](https://github.com/tb1337/paperless-api/blob/
 
 ```python
 tag = await paperless.tags(5)
-print(tag.name)            # "Invoice"
-print(tag.color)           # "#a6cee3"
+print(tag.name)  # "Invoice"
+print(tag.color)  # "#a6cee3"
 print(tag.document_count)  # 38
 ```
 
@@ -72,7 +72,7 @@ Raises `DeletionError` on failure. Pass `silent_fail=True` to suppress it.
 ```python
 async with paperless.tags.with_permissions():
     tag = await paperless.tags(5)
-    print(tag.owner)        # owner user id
+    print(tag.owner)  # owner user id
     print(tag.permissions)  # Permissions
 ```
 

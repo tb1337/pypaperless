@@ -10,9 +10,9 @@ See [`pypaperless/models/permissions/users.py`](https://github.com/tb1337/paperl
 
 ```python
 user = await paperless.users(1)
-print(user.username)    # "admin"
-print(user.is_active)   # True
-print(user.groups)      # [2, 5]
+print(user.username)  # "admin"
+print(user.is_active)  # True
+print(user.groups)  # [2, 5]
 ```
 
 ## Iterate

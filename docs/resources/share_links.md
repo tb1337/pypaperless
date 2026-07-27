@@ -10,9 +10,9 @@ See [`pypaperless/models/share_links/share_link.py`](https://github.com/tb1337/p
 
 ```python
 link = await paperless.share_links(8)
-print(link.slug)       # "abc123xyz"
-print(link.document)   # 42
-print(link.expiration) # datetime(2024, 12, 31, ...) or None
+print(link.slug)  # "abc123xyz"
+print(link.document)  # 42
+print(link.expiration)  # datetime(2024, 12, 31, ...) or None
 ```
 
 ## Iterate
@@ -22,10 +22,7 @@ async for link in paperless.share_links:
     print(link.id, link.document, link.slug)
 
 # Find links for a specific document
-doc_links = [
-    lnk async for lnk in paperless.share_links
-    if lnk.document == 42
-]
+doc_links = [lnk async for lnk in paperless.share_links if lnk.document == 42]
 ```
 
 ## Create

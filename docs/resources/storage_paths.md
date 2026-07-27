@@ -67,7 +67,7 @@ Raises `DeletionError` on failure. Pass `silent_fail=True` to suppress it.
 ```python
 async with paperless.storage_paths.with_permissions():
     sp = await paperless.storage_paths(2)
-    print(sp.owner)        # owner user id
+    print(sp.owner)  # owner user id
     print(sp.permissions)  # Permissions
 ```
 

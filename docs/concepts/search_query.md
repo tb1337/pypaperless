@@ -32,8 +32,8 @@ result = await paperless.search(q)
 ### Plain term
 
 ```python
-Q("produ*name")   # wildcard
-Q("contract")     # exact word
+Q("produ*name")  # wildcard
+Q("contract")  # exact word
 ```
 
 ### Field-scoped term (`field:value`)
@@ -50,9 +50,9 @@ Q.field("storage_path", "archive")
 Notes and custom fields support JSON sub-field syntax for targeted queries:
 
 ```python
-Q.field("notes.note", "urgent")           # match within note text
-Q.field("notes.user", "alice")             # match by note author
-Q.field("custom_fields.value", "12345")    # match custom field value
+Q.field("notes.note", "urgent")  # match within note text
+Q.field("notes.user", "alice")  # match by note author
+Q.field("custom_fields.value", "12345")  # match custom field value
 Q.field("custom_fields.name", "invoice")  # match custom field name
 ```
 

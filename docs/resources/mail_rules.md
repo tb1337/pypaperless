@@ -10,9 +10,9 @@ See [`pypaperless/models/mails/rules.py`](https://github.com/tb1337/paperless-ap
 
 ```python
 rule = await paperless.mail_rules(3)
-print(rule.name)         # "Invoice imports"
-print(rule.account)      # 1  (mail account id)
-print(rule.enabled)      # True
+print(rule.name)  # "Invoice imports"
+print(rule.account)  # 1  (mail account id)
+print(rule.enabled)  # True
 print(rule.filter_from)  # "billing@vendor.com"
 ```
 
@@ -31,7 +31,7 @@ active = [r async for r in paperless.mail_rules if r.enabled]
 ```python
 async with paperless.mail_rules.with_permissions():
     rule = await paperless.mail_rules(3)
-    print(rule.owner)        # owner user id
+    print(rule.owner)  # owner user id
     print(rule.permissions)  # Permissions
 ```
 

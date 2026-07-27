@@ -37,7 +37,7 @@ class Widget(
 class WidgetDraft(
     PaperlessModel,
     mixins.SecurableDraftModel,  # adds owner / set_permissions
-    mixins.CreatableModel,       # adds serialize() + validate_draft()
+    mixins.CreatableModel,  # adds serialize() + validate_draft()
 ):
     """Represent a new `Widget` not yet stored in Paperless."""
 
@@ -201,6 +201,7 @@ from pypaperless.services.documents.history import DocumentHistoryService
 # In the Document class body:
 _history: DocumentHistoryService | None = PrivateAttr(default=None)
 
+
 @property
 def history(self) -> DocumentHistoryService:
     """Return the history service for this document."""
@@ -217,6 +218,7 @@ from .history import DocumentHistoryService
 
 # In DocumentService.__init__ (after super().__init__(runtime)):
 self._history = DocumentHistoryService(runtime)
+
 
 # Property on DocumentService:
 @property
@@ -235,6 +237,7 @@ Services are registered **lazily** on `PaperlessClient` as cached properties ret
 # pypaperless/client.py
 from functools import cached_property
 # dispatchable_cached_property is imported from .dispatch
+
 
 @cached_property
 def widgets(self) -> services.WidgetService:
@@ -271,8 +274,20 @@ DATA_WIDGETS = {
 
 ```python
 DATA_DOCUMENT_HISTORY = [
-    {"id": 10, "timestamp": "2024-01-01T00:00:00Z", "action": "update", "changes": {}, "actor": {"id": 1, "username": "admin"}},
-    {"id": 1,  "timestamp": "2023-01-01T00:00:00Z", "action": "create", "changes": {}, "actor": {"id": 1, "username": "admin"}},
+    {
+        "id": 10,
+        "timestamp": "2024-01-01T00:00:00Z",
+        "action": "update",
+        "changes": {},
+        "actor": {"id": 1, "username": "admin"},
+    },
+    {
+        "id": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
+        "action": "create",
+        "changes": {},
+        "actor": {"id": 1, "username": "admin"},
+    },
 ]
 ```
 
@@ -291,17 +306,18 @@ DATA_WIDGET_META = {
 ## Audit EndpointSpec Examples
 
 ```python
-# Paginated list endpoint
-EndpointSpec("Widget", "/api/widgets/?page_size=1", Widget, "paginated", "Widget"),
-
-# Single object
-EndpointSpec("Config", "/api/config/1/", Config, "direct", "ApplicationConfiguration"),
-
-# Flat list (use first element for field comparison)
-EndpointSpec("DocumentNote", f"/api/documents/{TEST_DOC_ID}/notes/", DocumentNote, "list_index0", "Notes"),
-
-# Reuses an existing model (e.g. Trash returns Document objects)
-EndpointSpec("Trash", "/api/trash/?page_size=1", Document, "paginated", "Document"),
+ENDPOINTS = [
+    # Paginated list endpoint
+    EndpointSpec("Widget", "/api/widgets/?page_size=1", Widget, "paginated", "Widget"),
+    # Single object
+    EndpointSpec("Config", "/api/config/1/", Config, "direct", "ApplicationConfiguration"),
+    # Flat list (use first element for field comparison)
+    EndpointSpec(
+        "DocumentNote", f"/api/documents/{TEST_DOC_ID}/notes/", DocumentNote, "list_index0", "Notes"
+    ),
+    # Reuses an existing model (e.g. Trash returns Document objects)
+    EndpointSpec("Trash", "/api/trash/?page_size=1", Document, "paginated", "Document"),
+]
 ```
 
 ### KNOWN_EXTRAS for injected fields

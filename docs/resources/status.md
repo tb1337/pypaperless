@@ -14,7 +14,7 @@ No primary key - call without arguments:
 status = await paperless.status()
 
 print(status.pngx_version)  # "2.13.5"
-print(status.server_os)     # "Linux"
+print(status.server_os)  # "Linux"
 
 # Check storage
 if storage := status.storage:
@@ -23,12 +23,12 @@ if storage := status.storage:
 
 # Check database health
 if database := status.database:
-    print(database.status)   # "OK"
+    print(database.status)  # "OK"
 
 # Check background workers
 if tasks := status.tasks:
     print(tasks.celery_status)  # "OK"
-    print(tasks.redis_status)   # "OK"
+    print(tasks.redis_status)  # "OK"
 
 # Convenience property for any errors present
 if status.has_errors:
