@@ -241,11 +241,12 @@ class TestReadWrite(_SharedServiceTests):
         update_value = mapping.update_value
         pk = mapping.data["results"][0]["id"]
         service = getattr(paperless, mapping.resource)
+        single_url = (
+            f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
+        ).format(pk=pk)
         httpx_mock.add_response(
             method="GET",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json=mapping.data["results"][0],
         )
@@ -253,27 +254,27 @@ class TestReadWrite(_SharedServiceTests):
         setattr(to_update, update_field, update_value)
         httpx_mock.add_response(
             method="PATCH",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json={**to_update.snapshot, update_field: update_value},
         )
-        await service.update(to_update)
-        assert getattr(to_update, update_field) == update_value
-        # no-op update
-        assert not await service.update(to_update)
+        assert await service.update(to_update) is True
+        assert json_mod.loads(httpx_mock.get_requests()[-1].content) == {update_field: update_value}
+        # no-op update must not hit the API at all
+        sent = len(httpx_mock.get_requests())
+        assert await service.update(to_update) is False
+        assert len(httpx_mock.get_requests()) == sent
         # force full update
         setattr(to_update, update_field, update_value)
         httpx_mock.add_response(
             method="PUT",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json={**to_update.snapshot, update_field: update_value},
         )
-        await service.update(to_update, only_changed=False)
+        expected_full = to_update.api_dump()
+        assert await service.update(to_update, only_changed=False) is True
+        assert json_mod.loads(httpx_mock.get_requests()[-1].content) == expected_full
         assert getattr(to_update, update_field) == update_value
 
     async def test_delete(
@@ -354,6 +355,7 @@ class TestSecurableService:
             json={**mapping.data["results"][0], "permissions": DATA_OBJECT_PERMISSIONS},
         )
         item = await getattr(paperless, mapping.resource)(1)
+        assert httpx_mock.get_requests()[-1].url.params["full_perms"] == "true"
         assert item.has_permissions
         assert isinstance(item.permissions, Permissions)
         # iterator with permissions
@@ -373,7 +375,10 @@ class TestSecurableService:
                 ],
             },
         )
-        async for item in getattr(paperless, mapping.resource):
+        items = [item async for item in getattr(paperless, mapping.resource)]
+        assert httpx_mock.get_requests()[-1].url.params["full_perms"] == "true"
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
             assert isinstance(item, mapping.model_cls)
             assert item.has_permissions
             assert isinstance(item.permissions, Permissions)

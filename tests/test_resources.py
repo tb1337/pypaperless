@@ -1,5 +1,6 @@
 """Tests for resource services: Config, Version, Profile, Statistics, Status, Tasks, Trash."""
 
+import json
 import re
 
 import pytest
@@ -120,6 +121,9 @@ async def test_profile_update(httpx_mock: HTTPXMock, paperless: PaperlessClient)
     assert profile.first_name == "Patched"
     assert profile.last_name == "User"
 
+    body = json.loads(httpx_mock.get_requests()[-1].content)
+    assert body == {"first_name": "Patched", "last_name": "User"}
+
 
 async def test_profile_update_email(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
     """profile.update(email=) PATCHes only the email field."""
@@ -134,6 +138,9 @@ async def test_profile_update_email(httpx_mock: HTTPXMock, paperless: PaperlessC
     assert isinstance(profile, Profile)
     assert profile.email == "new@example.com"
 
+    body = json.loads(httpx_mock.get_requests()[-1].content)
+    assert body == {"email": "new@example.com"}
+
 
 async def test_profile_update_password(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
     """profile.update(password=) PATCHes only the password field."""
@@ -145,6 +152,9 @@ async def test_profile_update_password(httpx_mock: HTTPXMock, paperless: Paperle
     )
     profile = await paperless.profile.update(password="s3cr3t")  # noqa: S106
     assert isinstance(profile, Profile)
+
+    body = json.loads(httpx_mock.get_requests()[-1].content)
+    assert body == {"password": "s3cr3t"}
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +336,7 @@ class TestTasks:
         )
         result = await paperless.tasks.acknowledge([1])
         assert result == 1
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"tasks": [1]}
 
     async def test_summary(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """tasks.summary() returns a list of TaskSummary instances."""
@@ -365,6 +376,7 @@ class TestTasks:
         result = await paperless.tasks.run("sanity_check")
         assert isinstance(result, str)
         assert result == task_uuid
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"task_type": "sanity_check"}
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +408,10 @@ class TestMailAccounts:
             json={"result": "ok"},
         )
         await paperless.mail_accounts.process(1)
+
+        request = httpx_mock.get_requests()[-1]
+        assert request.url.path.endswith("/1/process/")
+        assert json.loads(request.content) == {}
 
 
 # ---------------------------------------------------------------------------
@@ -432,7 +448,7 @@ class TestTrash:
             assert item.deleted_at is not None
 
     async def test_restore(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-        """restore() POSTs to the trash endpoint."""
+        """restore() POSTs the restore action — never the destructive empty action."""
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.TRASH}",
@@ -440,6 +456,9 @@ class TestTrash:
             json={"result": "restored"},
         )
         await paperless.trash.restore([100, 101])
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"action": "restore", "documents": [100, 101]}
 
     async def test_empty(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """empty() empties all or specific documents from the trash."""
@@ -451,6 +470,9 @@ class TestTrash:
         )
         await paperless.trash.empty()
 
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"action": "empty"}
+
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.TRASH}",
@@ -458,6 +480,9 @@ class TestTrash:
             json={"result": "emptied"},
         )
         await paperless.trash.empty([100])
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"action": "empty", "documents": [100]}
 
 
 # ---------------------------------------------------------------------------
@@ -482,6 +507,10 @@ class TestSearch:
         assert result.documents is not None
         assert len(result.documents) == len(DATA_SEARCH["documents"])
 
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["query"] == "invoice"
+        assert "db_only" not in params
+
     async def test_call_with_db_only(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
@@ -495,6 +524,10 @@ class TestSearch:
         result = await paperless.search("invoice", db_only=True)
         assert isinstance(result, SearchResult)
         assert result.total == DATA_SEARCH["total"]
+
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["query"] == "invoice"
+        assert params["db_only"] == "true"
 
     async def test_call_with_builder(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
@@ -510,6 +543,8 @@ class TestSearch:
         result = await paperless.search(q)
         assert isinstance(result, SearchResult)
         assert result.total == DATA_SEARCH["total"]
+
+        assert httpx_mock.get_requests()[-1].url.params["query"] == str(q)
 
 
 # ---------------------------------------------------------------------------

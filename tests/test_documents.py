@@ -101,7 +101,7 @@ class TestDocuments:
         assert document.created_date == document.created
 
     async def test_update(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-        """Updating a document PATCHes the changed field."""
+        """Updating a document PATCHes the changed field and nothing else."""
         httpx_mock.add_response(
             method="GET",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
@@ -117,7 +117,8 @@ class TestDocuments:
             status_code=200,
             json={**to_update.snapshot, "title": new_title},
         )
-        await paperless.documents.update(to_update)
+        assert await paperless.documents.update(to_update) is True
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"title": new_title}
         assert to_update.title == new_title
 
     async def test_delete(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -802,6 +803,14 @@ class TestDocuments:
             message="Test Message",
         )
 
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {
+            "documents": [1],
+            "addresses": "test@example.org",
+            "subject": "Test Email",
+            "message": "Test Message",
+            "use_archive_version": True,
+        }
+
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_EMAIL}",
@@ -813,7 +822,12 @@ class TestDocuments:
                 addresses="test@example.org",
                 subject="Test Email",
                 message="Test Message",
+                use_archive_version=False,
             )
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body["documents"] == [1, 2]
+        assert body["use_archive_version"] is False
 
     async def test_is_deleted(self, paperless: PaperlessClient) -> None:
         """Document.is_deleted is True when deleted_at is set, False otherwise."""
@@ -974,6 +988,11 @@ class TestDocumentChat:
         assert result.q == DATA_DOCUMENT_CHAT["q"]
         assert result.document_id == DATA_DOCUMENT_CHAT["document_id"]
 
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {
+            "q": "What is this document about?",
+            "document_id": 1,
+        }
+
     async def test_call_without_document_id(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
@@ -988,6 +1007,8 @@ class TestDocumentChat:
         assert isinstance(result, DocumentChat)
         assert result.q == "General question"
         assert result.document_id is None
+
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"q": "General question"}
 
 
 class TestDocumentVersionService:
