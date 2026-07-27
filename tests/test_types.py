@@ -1,91 +1,64 @@
 """Tests for enum types: UNKNOWN fallback values."""
 
-from typing import Any
+import importlib
+import inspect
+import pkgutil
+from enum import Enum
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from pypaperless.const import PaperlessResource
+import pypaperless
 from pypaperless.models.saved_views import _DisplayFieldValue
 from pypaperless.models.types import (
-    CustomFieldType,
-    ImapSecurity,
-    MailAccountType,
-    MailRuleAction,
-    MailRuleAttachmentType,
-    MailRuleConsumptionScope,
-    MailRuleCorrespondentSource,
-    MailRulePdfLayout,
-    MailRuleTitleSource,
-    MatchingAlgorithm,
-    OutputType,
     SavedViewCustomFieldDisplay,
     SavedViewDisplayField,
-    SavedViewDisplayMode,
-    ShareLinkFileVersion,
-    StatusType,
-    TaskStatus,
-    TaskType,
-    WorkflowActionType,
-    WorkflowTriggerScheduleDateField,
-    WorkflowTriggerSource,
-    WorkflowTriggerType,
 )
 
 _NEVER_STR = "!never_existing_type!"
 _NEVER_INT = 99952342
 
 
-@pytest.mark.parametrize(
-    ("enum_cls", "bad_value"),
-    [
-        (PaperlessResource, _NEVER_STR),
-        (CustomFieldType, _NEVER_STR),
-        (MatchingAlgorithm, _NEVER_INT),
-        (ShareLinkFileVersion, _NEVER_STR),
-        (StatusType, _NEVER_STR),
-        (TaskType, _NEVER_STR),
-        (TaskStatus, _NEVER_STR),
-        (WorkflowActionType, _NEVER_INT),
-        (WorkflowTriggerType, _NEVER_INT),
-        (WorkflowTriggerScheduleDateField, _NEVER_STR),
-        (WorkflowTriggerSource, _NEVER_INT),
-        (OutputType, _NEVER_STR),
-        (SavedViewDisplayMode, _NEVER_STR),
-        (ImapSecurity, _NEVER_INT),
-        (MailAccountType, _NEVER_INT),
-        (MailRuleAction, _NEVER_INT),
-        (MailRuleTitleSource, _NEVER_INT),
-        (MailRuleCorrespondentSource, _NEVER_INT),
-        (MailRuleAttachmentType, _NEVER_INT),
-        (MailRuleConsumptionScope, _NEVER_INT),
-        (MailRulePdfLayout, _NEVER_INT),
-    ],
-    ids=[
-        "PaperlessResource",
-        "CustomFieldType",
-        "MatchingAlgorithm",
-        "ShareLinkFileVersion",
-        "StatusType",
-        "TaskType",
-        "TaskStatus",
-        "WorkflowActionType",
-        "WorkflowTriggerType",
-        "WorkflowTriggerScheduleDateField",
-        "WorkflowTriggerSource",
-        "OutputType",
-        "SavedViewDisplayMode",
+def _unknown_fallback_enums() -> list[type[Enum]]:
+    """Collect every library enum that maps unrecognised values onto UNKNOWN.
+
+    Discovered rather than hand-listed so a new enum cannot slip past this test.
+    """
+    found: dict[str, type[Enum]] = {}
+    for module_info in pkgutil.walk_packages(pypaperless.__path__, f"{pypaperless.__name__}."):
+        module = importlib.import_module(module_info.name)
+        for obj in vars(module).values():
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, Enum)
+                and obj.__module__.startswith(pypaperless.__name__)
+                and "UNKNOWN" in obj.__members__
+                and "_missing_" in obj.__dict__
+            ):
+                found[f"{obj.__module__}.{obj.__qualname__}"] = obj
+    return [found[key] for key in sorted(found)]
+
+
+def test_unknown_fallback_enum_discovery() -> None:
+    """The discovery helper must find enums across all model subpackages."""
+    names = {enum_cls.__name__ for enum_cls in _unknown_fallback_enums()}
+    assert {
         "ImapSecurity",
-        "MailAccountType",
-        "MailRuleAction",
-        "MailRuleTitleSource",
-        "MailRuleCorrespondentSource",
-        "MailRuleAttachmentType",
-        "MailRuleConsumptionScope",
-        "MailRulePdfLayout",
-    ],
+        "OcrMode",
+        "PaperlessResource",
+        "ShareLinkBundleStatus",
+        "TaskTriggerSource",
+        "WorkflowTriggerType",
+    } <= names
+
+
+@pytest.mark.parametrize(
+    "enum_cls",
+    _unknown_fallback_enums(),
+    ids=lambda enum_cls: enum_cls.__name__,
 )
-def test_enum_unknown_fallback(enum_cls: type[Any], bad_value: object) -> None:
+@pytest.mark.parametrize("bad_value", [_NEVER_STR, _NEVER_INT], ids=["str", "int"])
+def test_enum_unknown_fallback(enum_cls: type[Enum], bad_value: object) -> None:
     """Every custom enum must return UNKNOWN for unrecognised values instead of raising."""
     assert enum_cls(bad_value) == enum_cls.UNKNOWN
 
@@ -174,7 +147,7 @@ def test_display_field_value_passthrough_custom() -> None:
 def test_display_field_value_serialises_to_str() -> None:
     """SavedViewCustomFieldDisplay round-trips through JSON as a plain string."""
     result = _ta.validate_python("custom_field_8")
-    assert _ta.dump_python(result) == "custom_field_8"
+    assert _ta.dump_json(result) == b'"custom_field_8"'
 
 
 def test_display_field_value_non_string_raises() -> None:

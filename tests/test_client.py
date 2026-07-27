@@ -1,6 +1,7 @@
 """Tests for the PaperlessClient client: init, context, requests, URL, token, Page model."""
 
 import datetime
+import re
 from io import BytesIO
 from typing import Any
 
@@ -10,7 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 from pytest_httpx import HTTPXMock
 
 from pypaperless import PaperlessClient, PaperlessSettings, generate_api_token
-from pypaperless.const import EndpointPath
+from pypaperless.const import API_VERSION, EndpointPath
 from pypaperless.exceptions import (
     BadJsonResponseError,
     DeletionError,
@@ -33,13 +34,23 @@ from pypaperless.services.base import ResourceService
 from pypaperless.transport import PaperlessTransport
 from pypaperless.utils import normalize_base_url, process_form_data
 from tests.const import (
+    PAPERLESS_TEST_API_VERSION,
     PAPERLESS_TEST_PASSWORD,
     PAPERLESS_TEST_TOKEN,
     PAPERLESS_TEST_URL,
     PAPERLESS_TEST_USER,
+    PAPERLESS_TEST_VERSION,
 )
 
 from .data import DATA_PATHS, DATA_TOKEN
+
+
+def _multipart_parts(body: str) -> dict[str, list[str]]:
+    """Return ``{field name: [value, ...]}`` for a multipart/form-data body."""
+    parts: dict[str, list[str]] = {}
+    for match in re.finditer(r'name="([^"]+)"[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n(.*?)\r\n--', body):
+        parts.setdefault(match.group(1), []).append(match.group(2))
+    return parts
 
 
 async def test_init(httpx_mock: HTTPXMock, api: PaperlessClient) -> None:
@@ -52,6 +63,39 @@ async def test_init(httpx_mock: HTTPXMock, api: PaperlessClient) -> None:
     )
     await api.initialize()
     assert api.is_initialized
+    await api.close()
+
+
+async def test_init_reads_version_headers(httpx_mock: HTTPXMock, api: PaperlessClient) -> None:
+    """initialize() picks host_api_version / host_version up from the response headers."""
+    httpx_mock.add_response(
+        url=f"{PAPERLESS_TEST_URL}{EndpointPath.INDEX}",
+        method="GET",
+        status_code=200,
+        json=DATA_PATHS,
+        headers={
+            "x-api-version": str(PAPERLESS_TEST_API_VERSION),
+            "x-version": PAPERLESS_TEST_VERSION,
+        },
+    )
+    await api.initialize()
+    assert api.host_api_version == PAPERLESS_TEST_API_VERSION
+    assert api.host_version == PAPERLESS_TEST_VERSION
+    assert api.runtime.api_version == PAPERLESS_TEST_API_VERSION
+    await api.close()
+
+
+async def test_init_without_version_headers(httpx_mock: HTTPXMock, api: PaperlessClient) -> None:
+    """A host that sends no version headers falls back to the compiled-in API version."""
+    httpx_mock.add_response(
+        url=f"{PAPERLESS_TEST_URL}{EndpointPath.INDEX}",
+        method="GET",
+        status_code=200,
+        json=DATA_PATHS,
+    )
+    await api.initialize()
+    assert api.host_api_version == API_VERSION
+    assert api.host_version is None
     await api.close()
 
 
@@ -132,7 +176,7 @@ async def test_request(httpx_mock: HTTPXMock) -> None:
 
     httpx_mock.add_response(url=PAPERLESS_TEST_URL, method="GET", status_code=200)
     res = await api._runtime.transport.request_raw("get", PAPERLESS_TEST_URL)
-    assert res.status_code
+    assert res.status_code == 200
 
     form_data = {
         "none_field": None,
@@ -146,7 +190,28 @@ async def test_request(httpx_mock: HTTPXMock) -> None:
     }
     httpx_mock.add_response(url=PAPERLESS_TEST_URL, method="POST", status_code=200)
     res = await api._runtime.transport.request_raw("post", PAPERLESS_TEST_URL, form=form_data)
-    assert res.status_code
+    assert res.status_code == 200
+
+    body = httpx_mock.get_requests()[-1].content.decode()
+    parts = _multipart_parts(body)
+
+    # None is dropped entirely
+    assert "none_field" not in parts
+    # scalars are stringified
+    assert parts["str_field"] == ["Hello Bytes!"]
+    assert parts["int_field"] == ["23"]
+    assert parts["float_field"] == ["13.37"]
+    # lists become repeated values under the same name
+    assert parts["int_list"] == ["1", "1", "2", "3", "5", "8", "13"]
+    # dicts are flattened, the outer key disappears
+    assert "dict_field" not in parts
+    assert parts["dict_str_field"] == ["str"]
+    assert parts["dict_int_field"] == ["2"]
+    # bytes become an unnamed file, 2-tuples carry the filename
+    assert 'name="bytes_field"; filename=' in body
+    assert parts["bytes_field"] == ["Hello String!"]
+    assert 'name="tuple_field"; filename="filename.pdf"' in body
+    assert parts["tuple_field"] == ["Document Content"]
 
     await api.close()
 
@@ -593,8 +658,12 @@ def test_config_from_env_missing_url(monkeypatch: pytest.MonkeyPatch) -> None:
         PaperlessClient.from_env()
 
 
-def test_settings_token_is_secret() -> None:
+def test_settings_token_is_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     """The token never leaks through repr/str; from_config unwraps it for the transport."""
+    # PaperlessSettings is a BaseSettings — a PYPAPERLESS_TOKEN in the developer's
+    # environment would otherwise populate the deliberately anonymous config below
+    monkeypatch.delenv("PYPAPERLESS_TOKEN", raising=False)
+
     cfg = PaperlessSettings(url=PAPERLESS_TEST_URL, token=PAPERLESS_TEST_TOKEN)
     assert PAPERLESS_TEST_TOKEN not in repr(cfg)
     assert PAPERLESS_TEST_TOKEN not in str(cfg)
