@@ -13,7 +13,7 @@ Config is a singleton — call without arguments:
 ```python
 config = await paperless.config()
 
-print(config.language)          # e.g. "deu"
+print(config.language)  # e.g. "deu"
 print(config.barcodes_enabled)  # True / False
-print(config.app_title)         # e.g. "Paperless-ngx"
+print(config.app_title)  # e.g. "Paperless-ngx"
 ```

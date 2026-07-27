@@ -30,11 +30,13 @@ The cleanest way to use pypaperless is as an async context manager. It calls `in
 import asyncio
 from pypaperless import PaperlessClient
 
+
 async def main():
     async with PaperlessClient("localhost:8000", "your-api-token") as paperless:
         # paperless is now ready to use
         async for document in paperless.documents:
             print(document.id, document.title)
+
 
 asyncio.run(main())
 ```
@@ -117,9 +119,9 @@ After `initialize()`, you can inspect the host:
 from pypaperless import PaperlessClient
 
 async with PaperlessClient("localhost:8000", "your-api-token") as paperless:
-    print(paperless.is_initialized)   # True
-    print(paperless.host_version)     # e.g. "2.15.0"
-    print(paperless.host_api_version) # e.g. 9
+    print(paperless.is_initialized)  # True
+    print(paperless.host_version)  # e.g. "2.15.0"
+    print(paperless.host_api_version)  # e.g. 9
 ```
 
 ---

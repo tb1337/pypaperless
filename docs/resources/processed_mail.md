@@ -10,9 +10,9 @@ See [`pypaperless/models/mails/processed.py`](https://github.com/tb1337/paperles
 
 ```python
 entry = await paperless.processed_mail(5)
-print(entry.subject)   # "RE: Invoice #1234"
-print(entry.status)    # "success"
-print(entry.processed) # datetime(2024, 3, 15, 10, 30, ...)
+print(entry.subject)  # "RE: Invoice #1234"
+print(entry.status)  # "success"
+print(entry.processed)  # datetime(2024, 3, 15, 10, 30, ...)
 ```
 
 ## Iterate
@@ -23,10 +23,7 @@ async for entry in paperless.processed_mail:
         print(f"Failed: {entry.subject} - {entry.error}")
 
 # Collect all failures
-failures = [
-    e async for e in paperless.processed_mail
-    if e.status == "failed"
-]
+failures = [e async for e in paperless.processed_mail if e.status == "failed"]
 ```
 
 ## Owner

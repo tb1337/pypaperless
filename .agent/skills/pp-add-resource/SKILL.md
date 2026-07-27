@@ -163,9 +163,12 @@ sub-services in `tests/test_documents.py`:
 Pattern for mocking:
 
 ```python
-httpx_mock.add_response(method="GET",
+httpx_mock.add_response(
+    method="GET",
     url=f"{PAPERLESS_TEST_URL}{EndpointPath.TRASH}",  # or re.compile(...) for query params
-    status_code=200, json=DATA_TRASH)
+    status_code=200,
+    json=DATA_TRASH,
+)
 ```
 
 ### 8. `script/pngx_audit_coverage.py`
@@ -173,7 +176,10 @@ httpx_mock.add_response(method="GET",
 Add an `EndpointSpec` to the `ENDPOINTS` list:
 
 ```python
-EndpointSpec("Trash", "/api/trash/?page_size=1", Document, "paginated", "Document"),
+ENDPOINTS = [
+    ...,
+    EndpointSpec("Trash", "/api/trash/?page_size=1", Document, "paginated", "Document"),
+]
 ```
 
 `unwrap` values:
@@ -226,8 +232,7 @@ Add a test function before the relevant section and wire it into `main()`:
 ```python
 async def test_trash(p: PaperlessClient) -> None:
     _hdr("Trash – list deleted documents")
-    await check("trash.as_list()", p.trash.as_list(),
-        detail_fn=lambda r: f"count={len(r)}")
+    await check("trash.as_list()", p.trash.as_list(), detail_fn=lambda r: f"count={len(r)}")
 ```
 
 ### 11. Validate

@@ -145,7 +145,7 @@ await paperless.documents.update(doc)
 
 ```python
 class Permissions:
-    view: _PermissionScope    # .users: list[int], .groups: list[int]
+    view: _PermissionScope  # .users: list[int], .groups: list[int]
     change: _PermissionScope  # .users: list[int], .groups: list[int]
 ```
 

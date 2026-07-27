@@ -40,6 +40,7 @@
 import asyncio
 from pypaperless import PaperlessClient
 
+
 async def main():
     async with PaperlessClient("localhost:8000", "your-api-token") as paperless:
         # iterate all documents - pagination is handled automatically
@@ -53,6 +54,7 @@ async def main():
         async with paperless.tags.filter(name__icontains="invoice") as filtered:
             async for tag in filtered:
                 print(tag.id, tag.name)
+
 
 asyncio.run(main())
 ```

@@ -33,7 +33,7 @@ All fields are `None`-able. Nested objects are full model instances — pass the
 ```python
 result = await paperless.search("invoice")
 
-print(result.total)                    # total matches across all types
+print(result.total)  # total matches across all types
 for doc in result.documents or []:
     print(doc.title, doc.id)
 ```

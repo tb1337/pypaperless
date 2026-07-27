@@ -10,8 +10,8 @@ See [`pypaperless/models/saved_views.py`](https://github.com/tb1337/paperless-ap
 
 ```python
 view = await paperless.saved_views(2)
-print(view.name)          # "Inbox"
-print(view.sort_field)    # "created"
+print(view.name)  # "Inbox"
+print(view.sort_field)  # "created"
 print(view.sort_reverse)  # True
 print(view.filter_rules)  # [SavedViewFilterRule(...), ...]
 ```
@@ -31,7 +31,7 @@ views = await paperless.saved_views.as_dict()
 ```python
 async with paperless.saved_views.with_permissions():
     view = await paperless.saved_views(2)
-    print(view.owner)        # owner user id
+    print(view.owner)  # owner user id
     print(view.permissions)  # Permissions
 ```
 

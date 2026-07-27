@@ -97,6 +97,7 @@ def _expected_param(value: Any) -> str:
     ],
 )
 async def test_service_filter_forwards_typed_kwargs(
+    *,
     httpx_mock: HTTPXMock,
     paperless: PaperlessClient,
     api_key: str,

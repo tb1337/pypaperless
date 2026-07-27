@@ -158,6 +158,7 @@ pypaperless uses the standard Python `logging` module under the logger name `pyp
 
 ```python
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 ```
 

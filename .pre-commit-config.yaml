@@ -50,7 +50,8 @@ repos:
       - id: ruff-format
         name: 🐶 Ruff Formatter
         language: system
-        types: [python]
+        # markdown too: ruff formats python snippets inside code fences
+        types_or: [python, markdown]
         entry: uv run ruff format
         require_serial: true
         stages: [pre-commit, pre-push, manual]

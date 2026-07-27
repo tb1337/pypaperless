@@ -10,7 +10,7 @@ See [`pypaperless/models/document_types.py`](https://github.com/tb1337/paperless
 
 ```python
 document_type = await paperless.document_types(4)
-print(document_type.name)            # "Invoice"
+print(document_type.name)  # "Invoice"
 print(document_type.document_count)  # 17
 ```
 
@@ -65,7 +65,7 @@ Raises `DeletionError` on failure. Pass `silent_fail=True` to suppress it.
 ```python
 async with paperless.document_types.with_permissions():
     dt = await paperless.document_types(4)
-    print(dt.owner)        # owner user id
+    print(dt.owner)  # owner user id
     print(dt.permissions)  # Permissions
 ```
 

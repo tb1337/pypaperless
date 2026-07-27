@@ -28,8 +28,8 @@ print(document.archive_serial_number)
 Every document can be fetched in three modes: **download** (archived), **preview** and **thumbnail**. All return a `DownloadedDocument` instance.
 
 ```python
-download  = await paperless.documents.download(42)
-preview   = await paperless.documents.preview(42)
+download = await paperless.documents.download(42)
+preview = await paperless.documents.preview(42)
 thumbnail = await paperless.documents.thumbnail(42)
 ```
 
@@ -40,8 +40,8 @@ thumbnail = await paperless.documents.thumbnail(42)
 with open(download.disposition_filename, "wb") as f:
     f.write(download.content)
 
-print(download.content_type)       # e.g. "application/pdf"
-print(download.disposition_type)   # "attachment" or "inline"
+print(download.content_type)  # e.g. "application/pdf"
+print(download.disposition_type)  # "attachment" or "inline"
 ```
 
 ### Requesting the original file
@@ -184,8 +184,8 @@ returns the latest state without an extra request.
 
 ```python
 notes = await doc.notes()
-await doc.notes.delete(notes[0])        # model instance
-await doc.notes.delete(notes[0].id)     # integer shorthand (document pk implicit)
+await doc.notes.delete(notes[0])  # model instance
+await doc.notes.delete(notes[0].id)  # integer shorthand (document pk implicit)
 
 # standalone — supply the document pk explicitly
 await paperless.documents.notes.delete(notes[0].id, pk=42)
@@ -255,16 +255,16 @@ with open("invoice.pdf", "rb") as f:
     content = f.read()
 
 draft = paperless.documents.create(
-    document=content,           # required - raw file bytes
-    filename="invoice.pdf",     # original filename
+    document=content,  # required - raw file bytes
+    filename="invoice.pdf",  # original filename
     title="Invoice 2024-01",
     created=datetime.datetime(2024, 1, 15),
-    correspondent=3,            # correspondent ID
-    document_type=2,            # document type ID
-    storage_path=1,             # storage path ID
-    tags=[1, 5],                # tag IDs
+    correspondent=3,  # correspondent ID
+    document_type=2,  # document type ID
+    storage_path=1,  # storage path ID
+    tags=[1, 5],  # tag IDs
     archive_serial_number=1042,
-    custom_fields=[3, 8],       # custom field IDs (Paperless assigns null values)
+    custom_fields=[3, 8],  # custom field IDs (Paperless assigns null values)
 )
 
 task_id = await paperless.documents.save(draft)
@@ -397,7 +397,7 @@ entries = await doc.history()
 
 for entry in entries:
     print(entry.timestamp, entry.action, entry.actor.username if entry.actor else "-")
-    print(entry.changes)   # dict of changed fields
+    print(entry.changes)  # dict of changed fields
 
 # Via the service, passing the document pk explicitly
 entries = await paperless.documents.history(42)
@@ -439,7 +439,7 @@ await paperless.documents.bulk_edit.modify_tags(
 ```python
 await paperless.documents.bulk_edit.modify_custom_fields(
     [1, 2],
-    add_custom_fields={3: "open"},   # {pk: value} or list of PKs
+    add_custom_fields={3: "open"},  # {pk: value} or list of PKs
     remove_custom_fields=[4],
 )
 ```
@@ -472,8 +472,8 @@ await paperless.documents.bulk_edit.rotate([1, 2], 90)
 # Merge into a new single document
 await paperless.documents.bulk_edit.merge(
     [10, 11, 12],
-    metadata_document_id=10,   # whose metadata to use for the result
-    delete_originals=True,     # move source documents to trash after merging
+    metadata_document_id=10,  # whose metadata to use for the result
+    delete_originals=True,  # move source documents to trash after merging
 )
 ```
 

@@ -137,8 +137,8 @@ Monetary values provide convenience properties:
 ```python
 item = document.custom_fields.get(8, CustomFieldMonetaryValue)
 
-print(item.currency)   # "EUR"
-print(item.amount)     # 12.5
+print(item.currency)  # "EUR"
+print(item.amount)  # 12.5
 
 item.currency = "USD"
 item.amount = 9.99
@@ -150,7 +150,7 @@ item.amount = 9.99
 ```python
 item = document.custom_fields.get(5, CustomFieldSelectValue)
 
-print(item.label)   # human-readable label of selected option
+print(item.label)  # human-readable label of selected option
 print(item.labels)  # all available options as list[CustomFieldSelectOptions]
 ```
 
@@ -194,7 +194,7 @@ Use `-=` or `remove()`. You can pass a `CustomFieldValue`, a `CustomField` or a 
 ```python
 document.custom_fields -= new_value
 # or:
-document.custom_fields.remove(8)   # by field id
+document.custom_fields.remove(8)  # by field id
 document.custom_fields.remove(cf)  # by CustomField object
 
 await paperless.documents.update(document)
