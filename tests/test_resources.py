@@ -248,7 +248,9 @@ class TestTasks:
             status_code=200,
             json=DATA_TASKS,
         )
-        async for item in paperless.tasks:
+        items = [item async for item in paperless.tasks]
+        assert len(items) == len(DATA_TASKS["results"])
+        for item in items:
             assert isinstance(item, Task)
 
     async def test_filter(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -260,8 +262,13 @@ class TestTasks:
             json=DATA_TASKS,
         )
         async with paperless.tasks.filter(status=["pending"]) as filtered:
-            async for item in filtered:
-                assert isinstance(item, Task)
+            items = [item async for item in filtered]
+
+        assert len(items) == len(DATA_TASKS["results"])
+        for item in items:
+            assert isinstance(item, Task)
+        # a plain list filter is sent as repeated params, unlike __in/__all
+        assert httpx_mock.get_requests()[-1].url.params.get_list("status") == ["pending"]
 
     async def test_call_by_pk(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """tasks(pk) fetches by primary key."""

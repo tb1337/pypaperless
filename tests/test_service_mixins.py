@@ -59,6 +59,7 @@ class _SharedServiceTests:
         page = await anext(aiter(getattr(paperless, mapping.resource).pages(1)))
         assert isinstance(page, Page)
         assert isinstance(page.items, list)
+        assert len(page.items) == len(mapping.data["results"])
         for item in page.items:
             assert isinstance(item, mapping.model_cls)
 
@@ -76,7 +77,9 @@ class _SharedServiceTests:
             status_code=200,
             json=mapping.data,
         )
-        async for item in getattr(paperless, mapping.resource):
+        items = [item async for item in getattr(paperless, mapping.resource)]
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
             assert isinstance(item, mapping.model_cls)
 
     async def test_call(
@@ -145,6 +148,7 @@ class TestReadOnly(_SharedServiceTests):
             json=mapping.data,
         )
         items = await getattr(paperless, mapping.resource).as_dict()
+        assert set(items) == {entry["id"] for entry in mapping.data["results"]}
         for pk, obj in items.items():
             assert isinstance(pk, int)
             assert isinstance(obj, mapping.model_cls)
@@ -164,6 +168,7 @@ class TestReadOnly(_SharedServiceTests):
             json=mapping.data,
         )
         items = await getattr(paperless, mapping.resource).as_list()
+        assert len(items) == len(mapping.data["results"])
         for obj in items:
             assert isinstance(obj, mapping.model_cls)
 
@@ -203,8 +208,16 @@ class TestReadWrite(_SharedServiceTests):
             any_filter_list__in=["1", "2"],
             any_filter_no_list__in="1",
         ) as q:
-            async for item in q:
-                assert isinstance(item, mapping.model_cls)
+            items = [item async for item in q]
+
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
+            assert isinstance(item, mapping.model_cls)
+
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["any_filter_param"] == "1"
+        assert params["any_filter_list__in"] == "1,2"
+        assert params["any_filter_no_list__in"] == "1"
 
     async def test_create(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient, mapping: ResourceTestMapping
