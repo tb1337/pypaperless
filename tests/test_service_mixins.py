@@ -11,8 +11,9 @@ from pytest_httpx import HTTPXMock
 from pypaperless import PaperlessClient
 from pypaperless.const import EndpointPath
 from pypaperless.exceptions import DeletionError, DraftFieldRequiredError, NotFoundError
-from pypaperless.models import Page
+from pypaperless.models import Page, Tag
 from pypaperless.models.base import PaperlessModel
+from pypaperless.models.mixins.data_fields import MatchingAlgorithm
 from pypaperless.models.types import Permissions
 from pypaperless.services import mixins as svc_mixins
 from pypaperless.services.base import ResourceService
@@ -95,7 +96,6 @@ class _SharedServiceTests:
             json=mapping.data["results"][0],
         )
         item = await getattr(paperless, mapping.resource)(1)
-        assert item
         assert isinstance(item, mapping.model_cls)
         # must raise as 1337 doesn't exist
         httpx_mock.add_response(
@@ -468,11 +468,6 @@ class TestSecurableService:
         assert not service.request_permissions
 
 
-# ---------------------------------------------------------------------------
-# Standalone model / mixin unit tests
-# ---------------------------------------------------------------------------
-
-
 def test_permissions_from_existing_instance() -> None:
     """Permissions._accept_flat passes through non-dict input (e.g. an existing instance)."""
     # Call _accept_flat directly with a non-dict value — it must return it unchanged
@@ -565,3 +560,46 @@ async def test_filter_contexts_isolated_across_tasks(
 
     sent = {req.url.params["name__icontains"] for req in httpx_mock.get_requests()[-2:]}
     assert sent == {"acme", "globex"}
+
+
+def test_tag_with_nested_children(api: PaperlessClient) -> None:
+    """Tag._validate_children builds nested Tag instances from raw dict children."""
+    tag_data = {
+        "id": 1,
+        "slug": "parent",
+        "name": "Parent Tag",
+        "color": "#000000",
+        "text_color": "#ffffff",
+        "matching_algorithm": 2,
+        "children": [
+            {
+                "id": 2,
+                "slug": "child",
+                "name": "Child Tag",
+                "color": "#000000",
+                "text_color": "#ffffff",
+                "matching_algorithm": 1,
+                "children": [
+                    {
+                        "id": 3,
+                        "slug": "grandchild",
+                        "name": "Grandchild Tag",
+                        "color": "#000000",
+                        "text_color": "#ffffff",
+                        "matching_algorithm": 6,
+                    }
+                ],
+            }
+        ],
+    }
+    tag = Tag.from_data(api._runtime, data=tag_data)
+    assert tag.name == "Parent Tag"
+    assert isinstance(tag.children, list)
+    child = tag.children[0]
+    assert isinstance(child, Tag)
+    assert child.name == "Child Tag"
+    assert child.matching_algorithm == MatchingAlgorithm.ANY
+    assert isinstance(child.children, list)
+    assert isinstance(child.children[0], Tag)
+    assert child.children[0].name == "Grandchild Tag"
+    assert child.children[0].matching_algorithm == MatchingAlgorithm.AUTO

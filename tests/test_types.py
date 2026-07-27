@@ -63,11 +63,6 @@ def test_enum_unknown_fallback(enum_cls: type[Enum], bad_value: object) -> None:
     assert enum_cls(bad_value) == enum_cls.UNKNOWN
 
 
-# ---------------------------------------------------------------------------
-# CustomFieldDisplay
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("raw", "expected_pk"),
     [
@@ -95,10 +90,6 @@ def test_saved_view_custom_field_display_invalid(bad: str) -> None:
     with pytest.raises(ValueError, match="Not a custom field display value"):
         SavedViewCustomFieldDisplay(bad)
 
-
-# ---------------------------------------------------------------------------
-# SavedViewDisplayField coercion
-# ---------------------------------------------------------------------------
 
 _ta: TypeAdapter[SavedViewDisplayField | SavedViewCustomFieldDisplay] = TypeAdapter(
     _DisplayFieldValue

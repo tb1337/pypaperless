@@ -19,12 +19,16 @@ from .data import DATA_SCHEMA
 
 
 @pytest.fixture(name="api")
-def api_obj_fixture() -> PaperlessClient:
-    """Return PaperlessClient."""
-    return PaperlessClient(
+async def api_obj_fixture() -> AsyncGenerator[PaperlessClient, Any]:
+    """Return an uninitialized PaperlessClient and close its httpx client afterwards."""
+    api = PaperlessClient(
         PAPERLESS_TEST_URL,
         PAPERLESS_TEST_TOKEN,
     )
+    try:
+        yield api
+    finally:
+        await api.close()
 
 
 @pytest.fixture(name="paperless")

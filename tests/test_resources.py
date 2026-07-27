@@ -18,6 +18,8 @@ from pypaperless.models import (
     ShareLinkBundle,
     Status,
     Task,
+    WorkflowAction,
+    WorkflowTrigger,
 )
 from pypaperless.models.mixins.securable import Permissions
 from pypaperless.models.tasks import TaskStatusCounts, TaskSummary
@@ -26,6 +28,8 @@ from pypaperless.models.types import (
     StatusDatabase,
     StatusStorage,
     StatusTasks,
+    WorkflowActionType,
+    WorkflowTriggerType,
 )
 from pypaperless.services.workflows import WorkflowActionService, WorkflowTriggerService
 
@@ -45,196 +49,180 @@ from .data import (
     DATA_TASKS_STATUS_COUNTS,
     DATA_TASKS_SUMMARY,
     DATA_TRASH,
+    DATA_WORKFLOW_ACTIONS,
+    DATA_WORKFLOW_TRIGGERS,
 )
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
+
+class TestConfig:
+    """Config singleton service."""
+
+    async def test_config_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """config() fetches the singleton Config without requiring a pk."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.CONFIG_SINGLE}".format(pk=1),
+            status_code=200,
+            json=DATA_CONFIG[0],
+        )
+        item = await paperless.config()
+        assert isinstance(item, Config)
 
 
-async def test_config_call(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """config() fetches the singleton Config without requiring a pk."""
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.CONFIG_SINGLE}".format(pk=1),
-        status_code=200,
-        json=DATA_CONFIG[0],
-    )
-    item = await paperless.config()
-    assert item
-    assert isinstance(item, Config)
+class TestRemoteVersion:
+    """Remote version lookup service."""
+
+    async def test_remote_version_call(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """remote_version() returns version string and update_available flag."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.REMOTE_VERSION}",
+            status_code=200,
+            json=DATA_REMOTE_VERSION,
+        )
+        remote_version = await paperless.remote_version()
+        assert isinstance(remote_version.version, str)
+        assert isinstance(remote_version.update_available, bool)
 
 
-# ---------------------------------------------------------------------------
-# Remote version
-# ---------------------------------------------------------------------------
+class TestProfile:
+    """Profile service: read and partial updates."""
+
+    async def test_profile_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """profile() returns a Profile with expected field types."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
+            status_code=200,
+            json=DATA_PROFILE,
+        )
+        profile = await paperless.profile()
+        assert isinstance(profile, Profile)
+        assert isinstance(profile.email, str)
+        assert isinstance(profile.auth_token, str)
+        assert isinstance(profile.has_usable_password, bool)
+        assert isinstance(profile.is_mfa_enabled, bool)
+        assert isinstance(profile.social_accounts, list)
+
+    async def test_profile_update(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """profile.update() PATCHes the profile and returns the updated model."""
+        updated = {**DATA_PROFILE, "first_name": "Patched", "last_name": "User"}
+        httpx_mock.add_response(
+            method="PATCH",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
+            status_code=200,
+            json=updated,
+        )
+        profile = await paperless.profile.update(first_name="Patched", last_name="User")
+        assert isinstance(profile, Profile)
+        assert profile.first_name == "Patched"
+        assert profile.last_name == "User"
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"first_name": "Patched", "last_name": "User"}
+
+    async def test_profile_update_email(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """profile.update(email=) PATCHes only the email field."""
+        updated = {**DATA_PROFILE, "email": "new@example.com"}
+        httpx_mock.add_response(
+            method="PATCH",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
+            status_code=200,
+            json=updated,
+        )
+        profile = await paperless.profile.update(email="new@example.com")
+        assert isinstance(profile, Profile)
+        assert profile.email == "new@example.com"
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"email": "new@example.com"}
+
+    async def test_profile_update_password(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """profile.update(password=) PATCHes only the password field."""
+        httpx_mock.add_response(
+            method="PATCH",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
+            status_code=200,
+            json=DATA_PROFILE,
+        )
+        profile = await paperless.profile.update(password="s3cr3t")
+        assert isinstance(profile, Profile)
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body == {"password": "s3cr3t"}
 
 
-async def test_remote_version_call(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """remote_version() returns version string and update_available flag."""
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.REMOTE_VERSION}",
-        status_code=200,
-        json=DATA_REMOTE_VERSION,
-    )
-    remote_version = await paperless.remote_version()
-    assert remote_version
-    assert isinstance(remote_version.version, str)
-    assert isinstance(remote_version.update_available, bool)
+class TestStatistics:
+    """Statistics service."""
+
+    async def test_statistics_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """statistics() returns typed statistics with document file type counts."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.STATISTICS}",
+            status_code=200,
+            json=DATA_STATISTICS,
+        )
+        stats = await paperless.statistics()
+        assert isinstance(stats.character_count, int)
+        assert isinstance(stats.document_file_type_counts, list)
+        for item in stats.document_file_type_counts:
+            assert isinstance(item, StatisticDocumentFileTypeCount)
 
 
-# ---------------------------------------------------------------------------
-# Profile
-# ---------------------------------------------------------------------------
+class TestStatus:
+    """System status service and the has_errors aggregation."""
 
+    async def test_status_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """status() returns a Status with typed sub-objects."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.STATUS}",
+            status_code=200,
+            json=DATA_STATUS,
+        )
+        status = await paperless.status()
+        assert isinstance(status, Status)
+        assert isinstance(status.storage, StatusStorage)
+        assert isinstance(status.database, StatusDatabase)
+        assert isinstance(status.tasks, StatusTasks)
 
-async def test_profile_call(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """profile() returns a Profile with expected field types."""
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
-        status_code=200,
-        json=DATA_PROFILE,
-    )
-    profile = await paperless.profile()
-    assert profile
-    assert isinstance(profile, Profile)
-    assert isinstance(profile.email, str)
-    assert isinstance(profile.auth_token, str)
-    assert isinstance(profile.has_usable_password, bool)
-    assert isinstance(profile.is_mfa_enabled, bool)
-    assert isinstance(profile.social_accounts, list)
+    async def test_status_has_errors(self, paperless: PaperlessClient) -> None:
+        """Status.has_errors is True when any component is in ERROR state."""
+        data = {
+            "database": {"status": "OK"},
+            "tasks": {
+                "redis_status": "OK",
+                "celery_status": "OK",
+                "classifier_status": "OK",
+            },
+        }
+        status = Status.from_data(paperless.runtime, data=data)
+        assert status.has_errors is False
 
+        data["database"]["status"] = "ERROR"
+        status = Status.from_data(paperless.runtime, data=data)
+        assert status.has_errors is True
 
-async def test_profile_update(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """profile.update() PATCHes the profile and returns the updated model."""
-    updated = {**DATA_PROFILE, "first_name": "Patched", "last_name": "User"}
-    httpx_mock.add_response(
-        method="PATCH",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
-        status_code=200,
-        json=updated,
-    )
-    profile = await paperless.profile.update(first_name="Patched", last_name="User")
-    assert isinstance(profile, Profile)
-    assert profile.first_name == "Patched"
-    assert profile.last_name == "User"
+        # None values are treated as no errors
+        del data["database"]["status"]
+        status = Status.from_data(paperless.runtime, data=data)
+        assert status.has_errors is False
 
-    body = json.loads(httpx_mock.get_requests()[-1].content)
-    assert body == {"first_name": "Patched", "last_name": "User"}
+    def test_status_has_errors_no_tasks(self, paperless: PaperlessClient) -> None:
+        """has_errors must work when tasks is None, skipping the per-task status extend."""
+        status = Status.from_data(paperless.runtime, data={"database": {"status": "OK"}})
+        assert status.tasks is None
+        assert status.has_errors is False
 
-
-async def test_profile_update_email(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """profile.update(email=) PATCHes only the email field."""
-    updated = {**DATA_PROFILE, "email": "new@example.com"}
-    httpx_mock.add_response(
-        method="PATCH",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
-        status_code=200,
-        json=updated,
-    )
-    profile = await paperless.profile.update(email="new@example.com")
-    assert isinstance(profile, Profile)
-    assert profile.email == "new@example.com"
-
-    body = json.loads(httpx_mock.get_requests()[-1].content)
-    assert body == {"email": "new@example.com"}
-
-
-async def test_profile_update_password(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """profile.update(password=) PATCHes only the password field."""
-    httpx_mock.add_response(
-        method="PATCH",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.PROFILE}",
-        status_code=200,
-        json=DATA_PROFILE,
-    )
-    profile = await paperless.profile.update(password="s3cr3t")  # noqa: S106
-    assert isinstance(profile, Profile)
-
-    body = json.loads(httpx_mock.get_requests()[-1].content)
-    assert body == {"password": "s3cr3t"}
-
-
-# ---------------------------------------------------------------------------
-# Statistics
-# ---------------------------------------------------------------------------
-
-
-async def test_statistics_call(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """statistics() returns typed statistics with document file type counts."""
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.STATISTICS}",
-        status_code=200,
-        json=DATA_STATISTICS,
-    )
-    stats = await paperless.statistics()
-    assert stats
-    assert isinstance(stats.character_count, int)
-    assert isinstance(stats.document_file_type_counts, list)
-    for item in stats.document_file_type_counts:
-        assert isinstance(item, StatisticDocumentFileTypeCount)
-
-
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
-
-async def test_status_call(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-    """status() returns a Status with typed sub-objects."""
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{PAPERLESS_TEST_URL}{EndpointPath.STATUS}",
-        status_code=200,
-        json=DATA_STATUS,
-    )
-    status = await paperless.status()
-    assert status
-    assert isinstance(status, Status)
-    assert isinstance(status.storage, StatusStorage)
-    assert isinstance(status.database, StatusDatabase)
-    assert isinstance(status.tasks, StatusTasks)
-
-
-async def test_status_has_errors(paperless: PaperlessClient) -> None:
-    """Status.has_errors is True when any component is in ERROR state."""
-    data = {
-        "database": {"status": "OK"},
-        "tasks": {
-            "redis_status": "OK",
-            "celery_status": "OK",
-            "classifier_status": "OK",
-        },
-    }
-    status = Status.from_data(paperless.runtime, data=data)
-    assert status.has_errors is False
-
-    data["database"]["status"] = "ERROR"
-    status = Status.from_data(paperless.runtime, data=data)
-    assert status.has_errors is True
-
-    # None values are treated as no errors
-    del data["database"]["status"]
-    status = Status.from_data(paperless.runtime, data=data)
-    assert status.has_errors is False
-
-
-def test_status_has_errors_no_tasks(paperless: PaperlessClient) -> None:
-    """has_errors must work when tasks is None (skips the tasks extend, L91->100)."""
-    status = Status.from_data(paperless.runtime, data={"database": {"status": "OK"}})
-    assert status.tasks is None
-    assert status.has_errors is False
-
-    status_err = Status.from_data(paperless.runtime, data={"database": {"status": "ERROR"}})
-    assert status_err.has_errors is True
-
-
-# ---------------------------------------------------------------------------
-# Tasks
-# ---------------------------------------------------------------------------
+        status_err = Status.from_data(paperless.runtime, data={"database": {"status": "ERROR"}})
+        assert status_err.has_errors is True
 
 
 class TestTasks:
@@ -279,7 +267,6 @@ class TestTasks:
             json=DATA_TASKS["results"][0],
         )
         item = await paperless.tasks(1)
-        assert item
         assert isinstance(item, Task)
 
     async def test_call_by_uuid(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -291,7 +278,6 @@ class TestTasks:
             json=DATA_TASKS,
         )
         item = await paperless.tasks("dummy-found")
-        assert item
         assert isinstance(item, Task)
 
     async def test_call_pk_not_found(
@@ -386,11 +372,6 @@ class TestTasks:
         assert json.loads(httpx_mock.get_requests()[-1].content) == {"task_type": "sanity_check"}
 
 
-# ---------------------------------------------------------------------------
-# Mail Accounts
-# ---------------------------------------------------------------------------
-
-
 class TestMailAccounts:
     """Mail account service action endpoints."""
 
@@ -421,20 +402,75 @@ class TestMailAccounts:
         assert json.loads(request.content) == {}
 
 
-# ---------------------------------------------------------------------------
-# Workflows
-# ---------------------------------------------------------------------------
+class TestWorkflows:
+    """Workflow service and its action / trigger sub-services."""
 
+    async def test_sub_services(self, paperless: PaperlessClient) -> None:
+        """workflows.actions and workflows.triggers are the expected service types."""
+        assert isinstance(paperless.workflows.actions, WorkflowActionService)
+        assert isinstance(paperless.workflows.triggers, WorkflowTriggerService)
 
-async def test_workflow_sub_services(paperless: PaperlessClient) -> None:
-    """workflows.actions and workflows.triggers are the expected service types."""
-    assert isinstance(paperless.workflows.actions, WorkflowActionService)
-    assert isinstance(paperless.workflows.triggers, WorkflowTriggerService)
+    async def test_actions_iter(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """Iterating workflows.actions yields WorkflowAction instances."""
+        httpx_mock.add_response(
+            method="GET",
+            url=re.compile(
+                r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.WORKFLOW_ACTIONS}" + r"\?.*$"
+            ),
+            status_code=200,
+            json=DATA_WORKFLOW_ACTIONS,
+        )
+        items = [item async for item in paperless.workflows.actions]
+        assert len(items) == len(DATA_WORKFLOW_ACTIONS["results"])
+        for item in items:
+            assert isinstance(item, WorkflowAction)
+            assert isinstance(item.type, WorkflowActionType)
 
+    async def test_actions_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """workflows.actions(pk) fetches a single action by primary key."""
+        action = DATA_WORKFLOW_ACTIONS["results"][0]
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.WORKFLOW_ACTIONS_SINGLE}".format(
+                pk=action["id"]
+            ),
+            status_code=200,
+            json=action,
+        )
+        item = await paperless.workflows.actions(action["id"])
+        assert isinstance(item, WorkflowAction)
+        assert item.id == action["id"]
 
-# ---------------------------------------------------------------------------
-# Trash
-# ---------------------------------------------------------------------------
+    async def test_triggers_iter(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """Iterating workflows.triggers yields WorkflowTrigger instances."""
+        httpx_mock.add_response(
+            method="GET",
+            url=re.compile(
+                r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.WORKFLOW_TRIGGERS}" + r"\?.*$"
+            ),
+            status_code=200,
+            json=DATA_WORKFLOW_TRIGGERS,
+        )
+        items = [item async for item in paperless.workflows.triggers]
+        assert len(items) == len(DATA_WORKFLOW_TRIGGERS["results"])
+        for item in items:
+            assert isinstance(item, WorkflowTrigger)
+            assert isinstance(item.type, WorkflowTriggerType)
+
+    async def test_triggers_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """workflows.triggers(pk) fetches a single trigger by primary key."""
+        trigger = DATA_WORKFLOW_TRIGGERS["results"][0]
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.WORKFLOW_TRIGGERS_SINGLE}".format(
+                pk=trigger["id"]
+            ),
+            status_code=200,
+            json=trigger,
+        )
+        item = await paperless.workflows.triggers(trigger["id"])
+        assert isinstance(item, WorkflowTrigger)
+        assert item.id == trigger["id"]
 
 
 class TestTrash:
@@ -490,11 +526,6 @@ class TestTrash:
 
         body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body == {"action": "empty", "documents": [100]}
-
-
-# ---------------------------------------------------------------------------
-# Search
-# ---------------------------------------------------------------------------
 
 
 class TestSearch:
@@ -554,11 +585,6 @@ class TestSearch:
         assert httpx_mock.get_requests()[-1].url.params["query"] == str(q)
 
 
-# ---------------------------------------------------------------------------
-# BulkEditObjects
-# ---------------------------------------------------------------------------
-
-
 class TestBulkEditObjects:
     """BulkEditObjects service: set_permissions and delete operations."""
 
@@ -580,7 +606,7 @@ class TestBulkEditObjects:
         assert result is None
 
         request = httpx_mock.get_requests()[-1]
-        body = __import__("json").loads(request.content)
+        body = json.loads(request.content)
         assert body["object_type"] == "tags"
         assert body["operation"] == "set_permissions"
         assert body["objects"] == [1, 2, 3]
@@ -600,7 +626,7 @@ class TestBulkEditObjects:
         await paperless.bulk_edit_objects.set_permissions("correspondents", [7])
 
         request = httpx_mock.get_requests()[-1]
-        body = __import__("json").loads(request.content)
+        body = json.loads(request.content)
         assert "owner" not in body
         assert "permissions" not in body
         assert body["merge"] is False
@@ -617,15 +643,10 @@ class TestBulkEditObjects:
         assert result is None
 
         request = httpx_mock.get_requests()[-1]
-        body = __import__("json").loads(request.content)
+        body = json.loads(request.content)
         assert body["object_type"] == "document_types"
         assert body["operation"] == "delete"
         assert body["objects"] == [10, 11]
-
-
-# ---------------------------------------------------------------------------
-# DocumentsBulkEdit
-# ---------------------------------------------------------------------------
 
 
 class TestDocumentsBulkEdit:
@@ -642,7 +663,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.set_correspondent([1, 2], 5)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "set_correspondent"
         assert body["documents"] == [1, 2]
         assert body["parameters"]["correspondent"] == 5
@@ -658,7 +679,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.set_document_type([3], 7)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "set_document_type"
         assert body["parameters"]["document_type"] == 7
 
@@ -673,7 +694,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.set_storage_path([4, 5], 2)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "set_storage_path"
         assert body["parameters"]["storage_path"] == 2
 
@@ -686,7 +707,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.add_tag([1], 10)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "add_tag"
         assert body["parameters"]["tag"] == 10
 
@@ -699,7 +720,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.remove_tag([1], 10)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "remove_tag"
         assert body["parameters"]["tag"] == 10
 
@@ -712,7 +733,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.modify_tags([1], add_tags=[3, 4], remove_tags=[5])
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "modify_tags"
         assert body["parameters"]["add_tags"] == [3, 4]
         assert body["parameters"]["remove_tags"] == [5]
@@ -730,7 +751,7 @@ class TestDocumentsBulkEdit:
         await paperless.documents.bulk_edit.modify_custom_fields(
             [1], add_custom_fields={1: "value"}, remove_custom_fields=[2]
         )
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "modify_custom_fields"
         assert body["parameters"]["add_custom_fields"] == {"1": "value"}
         assert body["parameters"]["remove_custom_fields"] == [2]
@@ -747,7 +768,7 @@ class TestDocumentsBulkEdit:
         await paperless.documents.bulk_edit.set_permissions(
             [1, 2], owner=5, permissions=perms, merge=True
         )
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "set_permissions"
         assert body["parameters"]["owner"] == 5
         assert body["parameters"]["merge"] is True
@@ -762,7 +783,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.delete([1, 2])
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [1, 2]
 
     async def test_reprocess(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -774,7 +795,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.reprocess([1])
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [1]
 
     async def test_rotate(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -786,7 +807,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.rotate([1, 2], 90)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["degrees"] == 90
         assert body["source_mode"] == "latest_version"
 
@@ -801,7 +822,7 @@ class TestDocumentsBulkEdit:
         await paperless.documents.bulk_edit.merge(
             [1, 2], metadata_document_id=1, delete_originals=True
         )
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [1, 2]
         assert body["metadata_document_id"] == 1
         assert body["delete_originals"] is True
@@ -816,7 +837,7 @@ class TestDocumentsBulkEdit:
         )
         ops = [{"page": 1, "rotate": 90}]
         await paperless.documents.bulk_edit.edit_pdf(42, ops)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [42]
         assert body["operations"] == ops
         assert body["include_metadata"] is True
@@ -830,7 +851,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.remove_password([5], "s3cr3t")
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [5]
         assert body["password"] == "s3cr3t"
         assert body["source_mode"] == "latest_version"
@@ -838,7 +859,7 @@ class TestDocumentsBulkEdit:
     async def test_set_permissions_no_owner_no_permissions(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
-        """set_permissions() omits owner/set_permissions when not given (L235->237, L237->239)."""
+        """set_permissions() omits owner/set_permissions when not given."""
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_BULK_EDIT}",
@@ -846,7 +867,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.set_permissions([1, 2], merge=False)
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["method"] == "set_permissions"
         assert "owner" not in body["parameters"]
         assert "set_permissions" not in body["parameters"]
@@ -854,7 +875,7 @@ class TestDocumentsBulkEdit:
     async def test_merge_no_metadata_document_id(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
-        """merge() must omit metadata_document_id when not provided (L336->338)."""
+        """merge() must omit metadata_document_id when not provided."""
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_MERGE}",
@@ -862,7 +883,7 @@ class TestDocumentsBulkEdit:
             json=DATA_DOCUMENTS_BULK_EDIT,
         )
         await paperless.documents.bulk_edit.merge([1, 2])
-        body = __import__("json").loads(httpx_mock.get_requests()[-1].content)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
         assert body["documents"] == [1, 2]
         assert "metadata_document_id" not in body
 
@@ -878,11 +899,6 @@ class TestDocumentsBulkEdit:
         )
         with pytest.raises(BulkEditError):
             await paperless.documents.bulk_edit.modify_tags([1], add_tags=[3], remove_tags=[])
-
-
-# ---------------------------------------------------------------------------
-# ShareLinkBundles
-# ---------------------------------------------------------------------------
 
 
 class TestShareLinkBundleRebuild:

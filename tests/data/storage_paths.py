@@ -1,7 +1,7 @@
 """Storage paths snapshot."""
 
 DATA_STORAGE_PATHS = {
-    "count": 3,
+    "count": 5,
     "next": None,
     "previous": None,
     "results": [

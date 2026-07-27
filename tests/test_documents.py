@@ -4,6 +4,8 @@ import datetime
 import io
 import json
 import re
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from pytest_httpx import HTTPXMock
@@ -122,7 +124,7 @@ class TestDocuments:
         assert to_update.title == new_title
 
     async def test_delete(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-        """Deleting a document returns True on 204 and False on any other status."""
+        """delete() returns None on 204, raises DeletionError otherwise, silent_fail suppresses."""
         httpx_mock.add_response(
             method="GET",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
@@ -135,7 +137,22 @@ class TestDocuments:
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
             status_code=204,
         )
-        await paperless.documents.delete(to_delete)
+        assert await paperless.documents.delete(to_delete) is None
+
+        httpx_mock.add_response(
+            method="DELETE",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
+            status_code=404,
+        )
+        with pytest.raises(DeletionError):
+            await paperless.documents.delete(to_delete)
+
+        httpx_mock.add_response(
+            method="DELETE",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
+            status_code=404,
+        )
+        assert await paperless.documents.delete(to_delete, silent_fail=True) is None
 
     async def test_meta(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """get_metadata() returns a DocumentMeta with original and archive metadata lists."""
@@ -898,17 +915,32 @@ class TestDocuments:
         assert "name" in changed
 
 
-def test_coerce_custom_fields_non_list_passthrough(api: PaperlessClient) -> None:
-    """_coerce_custom_fields must return v unchanged when v is not a list (L215)."""
-    # Pass custom_fields=None explicitly so the before-validator is triggered with a
-    # non-list value; it must return None unchanged (the field type accepts None).
-    doc = Document.from_data(api._runtime, {"id": 1, "custom_fields": None})
-    assert doc.id == 1
-    assert doc.custom_fields is None
+def _validation_info(runtime: object) -> Any:
+    """Return a stand-in carrying just the ``context`` that _enrich_from_cache reads."""
+    return SimpleNamespace(context={"runtime": runtime})
+
+
+def test_enrich_from_cache_non_list_passthrough(api: PaperlessClient) -> None:
+    """_enrich_from_cache returns non-list input unchanged instead of trying to enrich it."""
+    api.runtime.cache.custom_fields = {
+        1: CustomField.from_data(api.runtime, {"id": 1, "name": "cached", "data_type": "string"})
+    }
+    # a populated cache is what makes the enrichment loop reachable at all, so the
+    # non-list guard is the only thing keeping this from iterating a plain string
+    passthrough = DocumentCustomFieldList._enrich_from_cache(
+        "not a list", _validation_info(api.runtime)
+    )
+    assert passthrough == "not a list"
+
+
+def test_enrich_from_cache_without_cache(api: PaperlessClient) -> None:
+    """Without a populated cache the raw items are returned untouched."""
+    raw = [{"field": 1, "value": "x"}]
+    assert DocumentCustomFieldList._enrich_from_cache(raw, _validation_info(api.runtime)) is raw
 
 
 def test_document_sub_service_properties_cached(api: PaperlessClient) -> None:
-    """Accessing .history and .share_links twice returns the same object (L220->222, L234->236)."""
+    """Accessing .history and .share_links twice returns the same cached sub-service."""
     doc = Document.from_data(api._runtime, {"id": 7})
     history1 = doc.history
     history2 = doc.history
