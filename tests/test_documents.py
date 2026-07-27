@@ -4,6 +4,8 @@ import datetime
 import io
 import json
 import re
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from pytest_httpx import HTTPXMock
@@ -101,7 +103,7 @@ class TestDocuments:
         assert document.created_date == document.created
 
     async def test_update(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-        """Updating a document PATCHes the changed field."""
+        """Updating a document PATCHes the changed field and nothing else."""
         httpx_mock.add_response(
             method="GET",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
@@ -117,11 +119,12 @@ class TestDocuments:
             status_code=200,
             json={**to_update.snapshot, "title": new_title},
         )
-        await paperless.documents.update(to_update)
+        assert await paperless.documents.update(to_update) is True
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"title": new_title}
         assert to_update.title == new_title
 
     async def test_delete(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
-        """Deleting a document returns True on 204 and False on any other status."""
+        """delete() returns None on 204, raises DeletionError otherwise, silent_fail suppresses."""
         httpx_mock.add_response(
             method="GET",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
@@ -134,7 +137,22 @@ class TestDocuments:
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
             status_code=204,
         )
-        await paperless.documents.delete(to_delete)
+        assert await paperless.documents.delete(to_delete) is None
+
+        httpx_mock.add_response(
+            method="DELETE",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
+            status_code=404,
+        )
+        with pytest.raises(DeletionError):
+            await paperless.documents.delete(to_delete)
+
+        httpx_mock.add_response(
+            method="DELETE",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=1),
+            status_code=404,
+        )
+        assert await paperless.documents.delete(to_delete, silent_fail=True) is None
 
     async def test_meta(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """get_metadata() returns a DocumentMeta with original and archive metadata lists."""
@@ -802,6 +820,14 @@ class TestDocuments:
             message="Test Message",
         )
 
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {
+            "documents": [1],
+            "addresses": "test@example.org",
+            "subject": "Test Email",
+            "message": "Test Message",
+            "use_archive_version": True,
+        }
+
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_EMAIL}",
@@ -813,7 +839,12 @@ class TestDocuments:
                 addresses="test@example.org",
                 subject="Test Email",
                 message="Test Message",
+                use_archive_version=False,
             )
+
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body["documents"] == [1, 2]
+        assert body["use_archive_version"] is False
 
     async def test_is_deleted(self, paperless: PaperlessClient) -> None:
         """Document.is_deleted is True when deleted_at is set, False otherwise."""
@@ -884,17 +915,32 @@ class TestDocuments:
         assert "name" in changed
 
 
-def test_coerce_custom_fields_non_list_passthrough(api: PaperlessClient) -> None:
-    """_coerce_custom_fields must return v unchanged when v is not a list (L215)."""
-    # Pass custom_fields=None explicitly so the before-validator is triggered with a
-    # non-list value; it must return None unchanged (the field type accepts None).
-    doc = Document.from_data(api._runtime, {"id": 1, "custom_fields": None})
-    assert doc.id == 1
-    assert doc.custom_fields is None
+def _validation_info(runtime: object) -> Any:
+    """Return a stand-in carrying just the ``context`` that _enrich_from_cache reads."""
+    return SimpleNamespace(context={"runtime": runtime})
+
+
+def test_enrich_from_cache_non_list_passthrough(api: PaperlessClient) -> None:
+    """_enrich_from_cache returns non-list input unchanged instead of trying to enrich it."""
+    api.runtime.cache.custom_fields = {
+        1: CustomField.from_data(api.runtime, {"id": 1, "name": "cached", "data_type": "string"})
+    }
+    # a populated cache is what makes the enrichment loop reachable at all, so the
+    # non-list guard is the only thing keeping this from iterating a plain string
+    passthrough = DocumentCustomFieldList._enrich_from_cache(
+        "not a list", _validation_info(api.runtime)
+    )
+    assert passthrough == "not a list"
+
+
+def test_enrich_from_cache_without_cache(api: PaperlessClient) -> None:
+    """Without a populated cache the raw items are returned untouched."""
+    raw = [{"field": 1, "value": "x"}]
+    assert DocumentCustomFieldList._enrich_from_cache(raw, _validation_info(api.runtime)) is raw
 
 
 def test_document_sub_service_properties_cached(api: PaperlessClient) -> None:
-    """Accessing .history and .share_links twice returns the same object (L220->222, L234->236)."""
+    """Accessing .history and .share_links twice returns the same cached sub-service."""
     doc = Document.from_data(api._runtime, {"id": 7})
     history1 = doc.history
     history2 = doc.history
@@ -974,6 +1020,11 @@ class TestDocumentChat:
         assert result.q == DATA_DOCUMENT_CHAT["q"]
         assert result.document_id == DATA_DOCUMENT_CHAT["document_id"]
 
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {
+            "q": "What is this document about?",
+            "document_id": 1,
+        }
+
     async def test_call_without_document_id(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
@@ -989,6 +1040,8 @@ class TestDocumentChat:
         assert result.q == "General question"
         assert result.document_id is None
 
+        assert json.loads(httpx_mock.get_requests()[-1].content) == {"q": "General question"}
+
 
 class TestDocumentVersionService:
     """DocumentVersionService: upload / update / delete per-document sub-service."""
@@ -996,7 +1049,7 @@ class TestDocumentVersionService:
     async def test_upload_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
     ) -> None:
-        """upload() POSTs multipart data and returns None."""
+        """upload() POSTs the file as multipart and omits version_label when not given."""
         httpx_mock.add_response(
             method="POST",
             url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_UPDATE_VERSION}".format(pk=1),
@@ -1006,6 +1059,13 @@ class TestDocumentVersionService:
 
         result = await paperless.documents.versions.upload(io.BytesIO(b"data"), pk=1)
         assert result is None
+
+        request = httpx_mock.get_requests()[-1]
+        assert request.headers["content-type"].startswith("multipart/form-data")
+        body = request.content.decode(errors="replace")
+        assert 'name="document"' in body
+        assert "\r\n\r\ndata\r\n" in body
+        assert 'name="version_label"' not in body
 
     async def test_upload_with_label_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
@@ -1022,6 +1082,9 @@ class TestDocumentVersionService:
             io.BytesIO(b"data"), version_label="v2", pk=1
         )
         assert result is None
+
+        body = httpx_mock.get_requests()[-1].content.decode(errors="replace")
+        assert re.search(r'name="version_label"\r\n\r\nv2\r\n', body) is not None
 
     async def test_update_via_service(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient

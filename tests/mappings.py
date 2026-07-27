@@ -3,12 +3,11 @@
 from dataclasses import dataclass
 from typing import Any
 
-from pypaperless import models, services
+from pypaperless import models
 from pypaperless.const import PaperlessResource
 from pypaperless.models import types
 
 from .data import (
-    DATA_CONFIG,
     DATA_CORRESPONDENTS,
     DATA_CUSTOM_FIELDS,
     DATA_DOCUMENT_TYPES,
@@ -20,10 +19,8 @@ from .data import (
     DATA_SAVED_VIEWS,
     DATA_SHARE_LINK_BUNDLES,
     DATA_SHARE_LINKS,
-    DATA_STATUS,
     DATA_STORAGE_PATHS,
     DATA_TAGS,
-    DATA_TASKS,
     DATA_USERS,
     DATA_WORKFLOWS,
 )
@@ -35,7 +32,6 @@ class ResourceTestMapping:
 
     resource: str
     data: dict[str, Any] | list[dict[str, Any]]
-    service_cls: type
     model_cls: type
     draft_cls: type | None = None
     draft_defaults: dict[str, Any] | None = None
@@ -44,21 +40,11 @@ class ResourceTestMapping:
     # field and value used by test_update
     update_field: str = "name"
     update_value: Any = "Name Updated"
-    # explicit mock JSON for test_draft_save; None → {"id": N} default
-    draft_response_json: Any = None
 
-
-CONFIG_MAP = ResourceTestMapping(
-    PaperlessResource.CONFIG,
-    DATA_CONFIG,
-    services.ConfigService,
-    models.Config,
-)
 
 CORRESPONDENT_MAP = ResourceTestMapping(
     PaperlessResource.CORRESPONDENTS,
     DATA_CORRESPONDENTS,
-    services.CorrespondentService,
     models.Correspondent,
     models.CorrespondentDraft,
     {
@@ -72,7 +58,6 @@ CORRESPONDENT_MAP = ResourceTestMapping(
 CUSTOM_FIELD_MAP = ResourceTestMapping(
     PaperlessResource.CUSTOM_FIELDS,
     DATA_CUSTOM_FIELDS,
-    services.CustomFieldService,
     models.CustomField,
     models.CustomFieldDraft,
     {
@@ -85,7 +70,6 @@ CUSTOM_FIELD_MAP = ResourceTestMapping(
 DOCUMENT_MAP = ResourceTestMapping(
     PaperlessResource.DOCUMENTS,
     DATA_DOCUMENTS,
-    services.DocumentService,
     models.Document,
     models.DocumentDraft,
     {
@@ -100,13 +84,11 @@ DOCUMENT_MAP = ResourceTestMapping(
     },
     update_field="title",
     update_value="Updated Title",
-    draft_response_json="11112222-3333-4444-5555-666677778888",
 )
 
 DOCUMENT_TYPE_MAP = ResourceTestMapping(
     PaperlessResource.DOCUMENT_TYPES,
     DATA_DOCUMENT_TYPES,
-    services.DocumentTypeService,
     models.DocumentType,
     models.DocumentTypeDraft,
     {
@@ -120,42 +102,36 @@ DOCUMENT_TYPE_MAP = ResourceTestMapping(
 GROUP_MAP = ResourceTestMapping(
     PaperlessResource.GROUPS,
     DATA_GROUPS,
-    services.GroupService,
     models.Group,
 )
 
 MAIL_ACCOUNT_MAP = ResourceTestMapping(
     PaperlessResource.MAIL_ACCOUNTS,
     DATA_MAIL_ACCOUNTS,
-    services.MailAccountService,
     models.MailAccount,
 )
 
 MAIL_RULE_MAP = ResourceTestMapping(
     PaperlessResource.MAIL_RULES,
     DATA_MAIL_RULES,
-    services.MailRuleService,
     models.MailRule,
 )
 
 PROCESSED_MAIL_MAP = ResourceTestMapping(
     PaperlessResource.PROCESSED_MAIL,
     DATA_PROCESSED_MAIL,
-    services.ProcessedMailService,
     models.ProcessedMail,
 )
 
 SAVED_VIEW_MAP = ResourceTestMapping(
     PaperlessResource.SAVED_VIEWS,
     DATA_SAVED_VIEWS,
-    services.SavedViewService,
     models.SavedView,
 )
 
 SHARE_LINK_MAP = ResourceTestMapping(
     PaperlessResource.SHARE_LINKS,
     DATA_SHARE_LINKS,
-    services.ShareLinkService,
     models.ShareLink,
     models.ShareLinkDraft,
     {
@@ -171,7 +147,6 @@ SHARE_LINK_MAP = ResourceTestMapping(
 SHARE_LINK_BUNDLE_MAP = ResourceTestMapping(
     PaperlessResource.SHARE_LINK_BUNDLES,
     DATA_SHARE_LINK_BUNDLES,
-    services.ShareLinkBundleService,
     models.ShareLinkBundle,
     models.ShareLinkBundleDraft,
     {
@@ -183,17 +158,10 @@ SHARE_LINK_BUNDLE_MAP = ResourceTestMapping(
     update_value=5,
 )
 
-STATUS_MAP = ResourceTestMapping(
-    PaperlessResource.STATUS,
-    DATA_STATUS,
-    services.StatusService,
-    models.Status,
-)
 
 STORAGE_PATH_MAP = ResourceTestMapping(
     PaperlessResource.STORAGE_PATHS,
     DATA_STORAGE_PATHS,
-    services.StoragePathService,
     models.StoragePath,
     models.StoragePathDraft,
     {
@@ -208,7 +176,6 @@ STORAGE_PATH_MAP = ResourceTestMapping(
 TAG_MAP = ResourceTestMapping(
     PaperlessResource.TAGS,
     DATA_TAGS,
-    services.TagService,
     models.Tag,
     models.TagDraft,
     {
@@ -222,23 +189,15 @@ TAG_MAP = ResourceTestMapping(
     },
 )
 
-TASK_MAP = ResourceTestMapping(
-    PaperlessResource.TASKS,
-    DATA_TASKS,
-    services.TaskService,
-    models.Task,
-)
 
 USER_MAP = ResourceTestMapping(
     PaperlessResource.USERS,
     DATA_USERS,
-    services.UserService,
     models.User,
 )
 
 WORKFLOW_MAP = ResourceTestMapping(
     PaperlessResource.WORKFLOWS,
     DATA_WORKFLOWS,
-    services.WorkflowService,
     models.Workflow,
 )

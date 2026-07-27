@@ -9,17 +9,26 @@ from pytest_httpx import HTTPXMock
 from pypaperless import PaperlessClient
 from pypaperless.const import EndpointPath
 
-from .const import PAPERLESS_TEST_TOKEN, PAPERLESS_TEST_URL
+from .const import (
+    PAPERLESS_TEST_API_VERSION,
+    PAPERLESS_TEST_TOKEN,
+    PAPERLESS_TEST_URL,
+    PAPERLESS_TEST_VERSION,
+)
 from .data import DATA_SCHEMA
 
 
 @pytest.fixture(name="api")
-def api_obj_fixture() -> PaperlessClient:
-    """Return PaperlessClient."""
-    return PaperlessClient(
+async def api_obj_fixture() -> AsyncGenerator[PaperlessClient, Any]:
+    """Return an uninitialized PaperlessClient and close its httpx client afterwards."""
+    api = PaperlessClient(
         PAPERLESS_TEST_URL,
         PAPERLESS_TEST_TOKEN,
     )
+    try:
+        yield api
+    finally:
+        await api.close()
 
 
 @pytest.fixture(name="paperless")
@@ -33,6 +42,10 @@ async def paperless_fixture(
         method="GET",
         status_code=200,
         json=DATA_SCHEMA,
+        headers={
+            "x-api-version": str(PAPERLESS_TEST_API_VERSION),
+            "x-version": PAPERLESS_TEST_VERSION,
+        },
     )
     async with api:
         yield api

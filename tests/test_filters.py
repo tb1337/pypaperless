@@ -1,6 +1,7 @@
 """Tests for filter TypedDicts and typed service .filter() methods."""
 
 import re
+from typing import Any
 
 import pytest
 from pytest_httpx import HTTPXMock
@@ -24,9 +25,14 @@ from .data import (
     DATA_USERS,
 )
 
-# ---------------------------------------------------------------------------
-# Typed service .filter() acceptance
-# ---------------------------------------------------------------------------
+
+def _expected_param(value: Any) -> str:
+    """Return the query string form Paperless receives for a filter value."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ",".join(map(str, value))
+    return str(value)
 
 
 @pytest.mark.parametrize(
@@ -35,7 +41,7 @@ from .data import (
         (
             "documents",
             "documents",
-            {"title__icontains": "invoice", "is_tagged": True},
+            {"title__icontains": "invoice", "is_tagged": True, "id__in": [1, 2]},
             DATA_DOCUMENTS,
         ),
         ("correspondents", "correspondents", {"name__icontains": "acme"}, DATA_CORRESPONDENTS),
@@ -90,7 +96,7 @@ from .data import (
         "tasks",
     ],
 )
-async def test_service_filter_accepts_typed_kwargs(
+async def test_service_filter_forwards_typed_kwargs(
     httpx_mock: HTTPXMock,
     paperless: PaperlessClient,
     api_key: str,
@@ -98,7 +104,7 @@ async def test_service_filter_accepts_typed_kwargs(
     filter_kwargs: dict,
     mock_data: dict,
 ) -> None:
-    """service.filter() accepts typed filter kwargs and iterates results without error."""
+    """service.filter() forwards every typed filter kwarg into the query string."""
     httpx_mock.add_response(
         method="GET",
         url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath[api_key.upper()]}" + r"\?.*$"),
@@ -106,5 +112,10 @@ async def test_service_filter_accepts_typed_kwargs(
         json=mock_data,
     )
     async with getattr(paperless, service_attr).filter(**filter_kwargs) as q:
-        async for item in q:
-            assert item is not None
+        items = [item async for item in q]
+
+    assert len(items) == len(mock_data["results"])
+
+    params = httpx_mock.get_requests()[-1].url.params
+    for key, value in filter_kwargs.items():
+        assert params[key] == _expected_param(value)

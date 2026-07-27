@@ -1,7 +1,7 @@
 """Tags snapshot."""
 
 DATA_TAGS = {
-    "count": 2,
+    "count": 5,
     "next": None,
     "previous": None,
     "results": [
