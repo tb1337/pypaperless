@@ -77,6 +77,19 @@ async with paperless.tasks.filter(
         print(task.task_id)
 ```
 
+`name` and `result` are free-text searches, not exact matches. `name` matches the input
+filename as well as the task type and trigger source labels; `result` matches the result
+reason, the error message and the document id:
+
+```python
+async with paperless.tasks.filter(name="invoice.pdf") as ctx:
+    async for task in ctx:
+        print(task.task_id, task.status)
+
+async with paperless.tasks.filter(result="timeout") as ctx:
+    failed = await ctx.as_list()
+```
+
 ## Active tasks
 
 `active()` iterates over currently pending or running tasks (capped at 50 by the server):

@@ -2350,7 +2350,7 @@
       },
       "put": {
         "operationId": "documents_update",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -2411,7 +2411,7 @@
       },
       "patch": {
         "operationId": "documents_partial_update",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -2471,7 +2471,7 @@
       },
       "delete": {
         "operationId": "documents_destroy",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -3065,7 +3065,7 @@
     "/api/documents/{id}/root/": {
       "get": {
         "operationId": "documents_root",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -3274,7 +3274,7 @@
     "/api/documents/{id}/update_version/": {
       "post": {
         "operationId": "documents_update_version",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -3327,7 +3327,7 @@
     "/api/documents/{id}/versions/{version_id}/": {
       "patch": {
         "operationId": "documents_update_version_label",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",
@@ -3395,7 +3395,7 @@
       },
       "delete": {
         "operationId": "documents_delete_version",
-        "description": "Pass a user object to serializer",
+        "description": "Prefetch Django-Guardian permissions for a list before serialization, to avoid N+1 queries.",
         "parameters": [
           {
             "in": "path",

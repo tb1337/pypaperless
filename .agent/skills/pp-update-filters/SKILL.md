@@ -19,7 +19,6 @@ argument-hint: "Optional: name of a specific resource to update (e.g. Document, 
 | `pypaperless/models/filters.py` | TypedDicts — one per filterable resource |
 | `pypaperless/models/types.py` | Re-exports all filter TypedDicts |
 | `pypaperless/services/<name>.py` | `filter()` override with `Unpack[XxxFilters]` |
-| `pypaperless/services/trash.py` | Also uses `DocumentFilters` |
 | `docs/resources/<name>.md` | Per-resource filter examples |
 
 ---
@@ -71,15 +70,19 @@ Schema bug: `shared_by__id` is `boolean` in the schema — keep `int` in the Typ
 | `ShareLinkFilterSet` | `ShareLinkFilters` |
 
 Not every filterable resource maps to a dedicated upstream FilterSet. `GroupFilters`, `UserFilters`,
-`ShareLinkBundleFilters` and `TaskSummaryFilters` are pypaperless-composed (they extend the private
-bases or another TypedDict) — take their fields from `schema.json` (Step 1), not from a row above.
+`ProcessedMailFilters`, `ShareLinkBundleFilters` and `TaskSummaryFilters` are pypaperless-composed
+(they extend the private bases or another TypedDict) — take their fields from `schema.json`
+(Step 1), not from a row above.
+
+`PaperlessTaskFilterSet.name` and `.result` are `CharFilter(method=…)` free-text searches, not
+exact matches — keep the inline comments in `TaskFilters` that say so.
 
 ### Style rules
 
 - `total=False` on every class.
 - No `page` / `page_size` fields.
 - No section-header comments (ERA001).
-- Fields sorted **alphabetically**. Classes sorted **alphabetically**; private bases (`_CreatedFilters`, `_IdFilters`, `_NameFilters`, `_ExpirationFilters`) always first.
+- Fields sorted **alphabetically**. Classes sorted **alphabetically**; private bases (`_CreatedFilters`, `_IdFilters`, `_ExpirationFilters`, `_NameFilters`, `_NameIdFilters`) always first.
 - Use a pypaperless enum type instead of plain `str` whenever the schema documents a fixed value set for a field. Pattern: `XxxEnum | str` for single-value fields; `XxxEnum | str | list[XxxEnum | str]` for array fields. Import the enum directly from its model module (not from `types.py`).
 - Inline comments only for non-obvious semantics: `# comma-separated PKs`, `# JSON expression`, `# True → has at least one tag`, etc.
 - No blank lines between fields.
@@ -92,7 +95,8 @@ Always use the narrowest fitting base.
 
 | Situation | Inherit from |
 | --- | --- |
-| Resource has `id` + `name__*` | `_NameFilters` |
+| Resource has `id` + `name__*` | `_NameIdFilters` |
+| Resource has `name__*` only | `_NameFilters` |
 | Resource has `id` only | `_IdFilters` |
 | Resource has `created__*` date range | `_CreatedFilters` |
 | Resource has `expiration__*` date range | `_ExpirationFilters` |
@@ -104,9 +108,14 @@ Current private bases and what they provide:
 | Base | Fields provided |
 | --- | --- |
 | `_IdFilters` | `id`, `id__in` |
-| `_NameFilters(_IdFilters)` | `+ name__icontains/iendswith/iexact/istartswith` |
+| `_NameFilters` | `name__icontains/iendswith/iexact/istartswith` |
+| `_NameIdFilters(_IdFilters, _NameFilters)` | both of the above |
 | `_CreatedFilters` | `created__date__gt/gte/lt/lte`, `created__day/month/year`, `created__gt/gte/lt/lte` |
 | `_ExpirationFilters` | same fields with `expiration__` prefix |
+
+`groups` is the only name-filterable resource without `id`/`id__in` — it inherits `_NameFilters`
+directly, every other named resource uses `_NameIdFilters`. Re-verify against `schema.json`
+before moving a class between the two.
 
 A class body with only a docstring is correct when the base covers everything.
 When adding a new date-range field group that would appear in ≥ 2 classes, create a new private base first.
@@ -145,15 +154,19 @@ Always call `self._store_filters(**kwargs)` — never `super().filter(**kwargs)`
 | `DocumentService` | `DocumentFilters` |
 | `DocumentTypeService` | `DocumentTypeFilters` |
 | `GroupService` | `GroupFilters` |
+| `ProcessedMailService` | `ProcessedMailFilters` |
 | `ShareLinkBundleService` | `ShareLinkBundleFilters` |
 | `ShareLinkService` | `ShareLinkFilters` |
 | `StoragePathService` | `StoragePathFilters` |
 | `TagService` | `TagFilters` |
 | `TaskService` | `TaskFilters` |
-| `TrashService` | `DocumentFilters` |
 | `UserService` | `UserFilters` |
 
-No override for: `SavedViewService`, `WorkflowService`, `MailAccountService`, `MailRuleService`, `ProcessedMailService`.
+No override for: `SavedViewService`, `WorkflowService`, `MailAccountService`, `MailRuleService`, `TrashService`.
+
+`TrashService` deliberately has none: `/api/trash/` declares zero query parameters and silently
+ignores document filters (verified live — identical `count` with and without a filter), so it keeps
+the pagination-only base `filter()`.
 
 `TaskService` additionally exposes two typed methods that must be kept in sync alongside `filter()`:
 `active(**Unpack[TaskFilters])` and `summary(**Unpack[TaskSummaryFilters])`. `TaskSummaryFilters`
