@@ -125,7 +125,7 @@ class IterableService(ResourceServiceProtocol[IdentifiedT]):
     ) -> PageGenerator[IdentifiedT]:
         """Iterate over resource pages.
 
-        Each yielded :class:`~pypaperless.models.pages.Page` contains up to
+        Each yielded :class:`~pypaperless.pagination.Page` contains up to
         *page_size* items.  Use within a :meth:`filter` context to apply
         server-side filters.
 

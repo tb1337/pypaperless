@@ -17,7 +17,7 @@ Every Paperless-ngx entity is exposed through a **service** on the `PaperlessCli
 | `groups`            |   ✓    |     ✓     |                 |          |          |               |
 | `mail_accounts`     |   ✓    |     ✓     |                 |          |          |       ✓       |
 | `mail_rules`        |   ✓    |     ✓     |                 |          |          |       ✓       |
-| `processed_mail`    |   ✓    |     ✓     |                 |          |          |       ✓       |
+| `processed_mail`    |   ✓    |     ✓     |                 |          |          |     owner     |
 | `profile`           |   ✓    |           |                 |    ✓     |          |               |
 | `saved_views`       |   ✓    |     ✓     |                 |          |          |       ✓       |
 | `share_link_bundles`|   ✓    |     ✓     |        ✓        |    ✓     |    ✓     |               |
@@ -36,9 +36,15 @@ Every Paperless-ngx entity is exposed through a **service** on the `PaperlessCli
     `bulk_edit_objects` exposes bulk `set_permissions` and `delete` for tags,
     correspondents, document types and storage paths. `documents.bulk_edit` exposes
     bulk operations (set metadata, tags, custom fields, permissions, delete, reprocess,
-    rotate, merge) for documents. Neither service follows the standard CRUD pattern above.
+    rotate, merge, edit PDF pages, remove PDF passwords) for documents. Neither service
+    follows the standard CRUD pattern above.
     See [Bulk Edit Objects](resources/bulk_edit_objects.md) and the
     [Documents concept page](concepts/documents.md#bulk-editing) for details.
+
+!!! note "`permissions` column"
+    A ✓ means the resource model carries the full `owner` / `user_can_change` /
+    `permissions` set and the service offers `with_permissions()`. `processed_mail`
+    is the one exception: it carries `owner` only, with no permission table.
 
 ---
 
@@ -128,6 +134,16 @@ async with paperless.documents.filter(title__icontains="invoice") as ctx:
 The filter context is automatically cleared when the `async with` block exits.
 Filters are task-local - concurrent asyncio tasks filtering the same service
 do not interfere with each other.
+
+!!! note "Resources without a typed filter set"
+    `saved_views`, `mail_accounts`, `mail_rules`, `trash` and `workflows`
+    (including `workflows.triggers` and `workflows.actions`) have no filter
+    TypedDict of their own, so `filter()` accepts no keys there. Iterate them
+    directly and narrow the result client-side.
+
+    For `trash` that is a server-side limitation rather than a gap: `/api/trash/`
+    declares no query parameters and silently returns the full trash when
+    filters are passed.
 
 ---
 

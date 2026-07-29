@@ -4,7 +4,7 @@ The `search` resource exposes the Paperless-ngx global search endpoint (`/api/se
 
 ## Model
 
-See [`pypaperless/models/search.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/search.py) and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for all types. The upstream schema component is `SearchResult`.
+See [`pypaperless/models/search.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/search.py) and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for all types. The upstream schema component is `SearchResult`.
 
 ### `SearchResult`
 

@@ -66,6 +66,6 @@ asyncio.run(main())
 
 ## Links
 
-- [GitHub repository](https://github.com/tb1337/paperless-api)
+- [GitHub repository](https://github.com/tb1337/pypaperless)
 - [Paperless-ngx documentation](https://docs.paperless-ngx.com/)
 - [Paperless-ngx API reference](https://docs.paperless-ngx.com/api/)

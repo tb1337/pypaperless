@@ -4,7 +4,7 @@ Documents are the core resource in Paperless-ngx. This page shows the essential 
 
 ## Models
 
-See [`pypaperless/models/documents/document.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/documents/document.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/documents/document.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/documents/document.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 
@@ -93,11 +93,16 @@ root = await doc.root()  # DocumentRoot
 # versions: upload / relabel / delete a document's file versions (not callable)
 with open("updated.pdf", "rb") as fh:
     await doc.versions.upload(fh, version_label="v2")
+info = await doc.versions.update(1, version_label="final")  # DocumentVersionInfo
 await doc.versions.delete(1)
 ```
 
-All other operations (download, preview, thumbnail, metadata, suggestions, more-like, email)
-are **service-only** — there are no model-level shortcuts for these:
+See [Documents — AI suggestions](../concepts/documents.md#ai-suggestions) and
+[Document versions](../concepts/documents.md#document-versions) for the full
+signatures.
+
+All other operations (download, preview, thumbnail, metadata, suggestions, more-like,
+email, chat) are **service-only** — there are no model-level shortcuts for these:
 
 ```python
 downloaded = await paperless.documents.download(doc.id)
@@ -108,6 +113,7 @@ suggestions = await paperless.documents.suggestions(doc.id)
 async for similar in paperless.documents.more_like(doc.id):
     print(similar.title)
 await paperless.documents.email(doc.id, addresses="alice@example.com", subject="Fwd", message="")
+answer = await paperless.documents.chat("What is this about?", doc.id)
 ```
 
 ## Permissions

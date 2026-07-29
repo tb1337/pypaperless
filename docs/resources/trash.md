@@ -4,7 +4,7 @@ The `trash` resource exposes documents that have been soft-deleted in Paperless-
 
 ## Model
 
-Trashed documents use the same `Document` model - see [`pypaperless/models/documents/document.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/documents/document.py) and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types. In the trash context, `deleted_at` is additionally populated with the timestamp when the document was moved to the trash.
+Trashed documents use the same `Document` model - see [`pypaperless/models/documents/document.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/documents/document.py) and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types. In the trash context, `deleted_at` is additionally populated with the timestamp when the document was moved to the trash.
 
 ## Iterate
 

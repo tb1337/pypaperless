@@ -11,8 +11,16 @@ The following resources include permission fields (`SecurableModel`):
 - `documents`
 - `correspondents`
 - `document_types`
+- `mail_accounts`
+- `mail_rules`
+- `saved_views`
 - `storage_paths`
 - `tags`
+
+!!! note
+    `processed_mail` exposes a plain `owner` field but no permission table -
+    `with_permissions()` has no effect there. See
+    [Processed Mail](../resources/processed_mail.md#owner).
 
 ---
 

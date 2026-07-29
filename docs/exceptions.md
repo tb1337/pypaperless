@@ -206,7 +206,18 @@ Use `default()` instead of `get()` to avoid this exception and receive `None` on
 
 #### `PrimaryKeyRequiredError`
 
-Raised when trying to access note data through `DocumentNoteService` without providing a document primary key.
+Raised when a document-scoped sub-service is used without a resolvable document primary
+key — that is, neither bound via a `Document` instance nor passed as `pk`. This covers
+`notes`, `history`, `share_links`, `ai_suggestions`, `root` and `versions`.
+
+```python
+from pypaperless.exceptions import PrimaryKeyRequiredError
+
+try:
+    await paperless.documents.history()  # no pk, no bound document
+except PrimaryKeyRequiredError:
+    print("Pass the document pk: paperless.documents.history(42)")
+```
 
 #### `TaskNotFoundError`
 

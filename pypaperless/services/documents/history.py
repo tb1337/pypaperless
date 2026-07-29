@@ -26,7 +26,7 @@ class DocumentHistoryService(DocumentScopedServiceBase):
 
             entries = await paperless.documents.history(42)
             for entry in entries:
-                print(entry.type, entry.timestamp)
+                print(entry.action, entry.timestamp)
 
         """
         doc_pk = self._get_document_pk(pk)

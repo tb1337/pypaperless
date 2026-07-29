@@ -4,7 +4,7 @@ The `processed_mail` resource is a read-only log of emails that have already bee
 
 ## Model
 
-See [`pypaperless/models/mails/processed.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/mails/processed.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/mails/processed.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/mails/processed.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 
@@ -43,7 +43,7 @@ async with paperless.processed_mail.filter(rule=3, status="FAILED") as ctx:
 ```
 
 `/api/processed_mail/` supports exactly two filters, both exact-match — see
-[`ProcessedMailFilters`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/filters.py).
+[`ProcessedMailFilters`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/filters.py).
 Note that `rule` must reference an existing mail rule; the API answers unknown ids with
 HTTP 400 rather than an empty result set.
 

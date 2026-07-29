@@ -4,7 +4,7 @@ The `profile` resource exposes the Paperless-ngx user profile for the currently 
 
 ## Model
 
-See [`pypaperless/models/profile.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/profile.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/profile.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/profile.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch
 

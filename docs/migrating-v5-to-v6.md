@@ -8,7 +8,7 @@ If you are still on Python 3.12, upgrade your runtime before updating pypaperles
 
 ---
 
-v6 is also almost a full rewrite of pypaperless. Three things drove it:
+v6 is also almost a full rewrite of pypaperless. Four things drove it:
 
 - **Models were too tightly coupled to the HTTP layer.** In v5, every model instance carried a reference to the client and called it directly. That made testing awkward and sharing models between contexts impossible. v6 models are plain data - all I/O goes through services.
 - **No runtime type safety.** v5 used dataclasses with manual dict conversion, so bad API responses would silently produce wrong values. v6 uses Pydantic v2, which validates every response at parse time.
@@ -32,7 +32,7 @@ v6 is also almost a full rewrite of pypaperless. Three things drove it:
 | 9   | Note deletion: `note.delete()` → service call                                                                         | [Document notes](#document-notes)                                             |
 | 10  | `generate_api_token()` is now a module-level function, no longer a static class method                                | [Token generation](#token-generation)                                         |
 | 11  | `Task` fields and enum values overhauled; `run()` signature changed; new `active()` and `summary()` methods           | [Changed resources](#changed-resources)                                       |
-| 12  | New: `profile`, `trash`, `documents.history`, `share_links`, `documents.bulk_edit`, `bulk_edit_objects`               | [New resources](#new-resources)                                               |
+| 12  | New: `profile`, `trash`, `search`, `share_link_bundles`, `bulk_edit_objects`, six `documents.*` sub-services          | [New resources](#new-resources)                                               |
 | 13  | Rename four `Paperless`-prefixed exception classes; new `DeletionError`, `DispatchError`                              | [Error handling](#error-handling)                                             |
 | 14  | HTTP error statuses now raise typed exceptions: 404 → `NotFoundError`, other non-2xx → `UnexpectedStatusError`        | [Error handling](#http-error-statuses-raise-typed-exceptions)                 |
 
@@ -235,8 +235,8 @@ the **service** level. Model-level shortcuts (`doc.update()`, `doc.delete()`, `d
     pk = await paperless.save(draft)  # routes to TagService.save()
     ```
 
-    This works for all dispatchable resources: documents, correspondents, document types,
-    storage paths, tags, share links, and custom fields.
+    This works for all dispatchable resources: documents, document notes, correspondents,
+    document types, storage paths, tags, share links, share link bundles, and custom fields.
 
 v6 provides two equivalent ways to perform CRUD:
 
@@ -410,14 +410,17 @@ All file and metadata access now goes through the service:
 | *(not available)*                       | `async for d in paperless.documents.more_like(doc.id):`     |
 | *(not available)*                       | `await paperless.documents.email(doc.id, ...)`              |
 
-**Sub-service shortcuts** for notes, history and share links remain available via bound
-sub-service properties on the `Document` instance:
+**Sub-service shortcuts** remain available via bound sub-service properties on the
+`Document` instance - six of them in v6:
 
-| Access                    | Equivalent                                      |
-| ------------------------- | ----------------------------------------------- |
-| `await doc.notes()`       | `await paperless.documents.notes(doc.id)`       |
-| `await doc.history()`     | `await paperless.documents.history(doc.id)`     |
-| `await doc.share_links()` | `await paperless.documents.share_links(doc.id)` |
+| Access                       | Equivalent                                         |
+| ---------------------------- | -------------------------------------------------- |
+| `await doc.notes()`          | `await paperless.documents.notes(doc.id)`          |
+| `await doc.history()`        | `await paperless.documents.history(doc.id)`        |
+| `await doc.share_links()`    | `await paperless.documents.share_links(doc.id)`    |
+| `await doc.ai_suggestions()` | `await paperless.documents.ai_suggestions(doc.id)` |
+| `await doc.root()`           | `await paperless.documents.root(doc.id)`           |
+| `doc.versions.upload(f)`     | `paperless.documents.versions.upload(f, pk=doc.id)` |
 
 ---
 
@@ -533,7 +536,10 @@ for s in summaries:
 
 ## New resources
 
-Six new services were added.
+Five new top-level services were added - `profile`, `trash`, `search`,
+`share_link_bundles` and `bulk_edit_objects` - plus six new document
+sub-services: `history`, `bulk_edit`, `chat`, `ai_suggestions`, `versions`
+and `root`.
 
 ### `paperless.profile`
 
@@ -562,33 +568,45 @@ The `Document.is_deleted` property returns `True` for documents retrieved from t
 
 See [Trash](resources/trash.md) for details.
 
-### `paperless.share_links`
+### `paperless.search`
 
-Create and manage publicly accessible share links for documents without requiring
-authentication. Supports full CRUD.
+Query the global search endpoint, which matches across documents, tags,
+correspondents, document types and more in a single call:
 
 ```python
-from pypaperless.models.share_links import ShareLinkFileVersion
+from pypaperless.models.types import SearchQuery as Q
 
-draft = paperless.share_links.create(
-    document=42,
+result = await paperless.search(Q("invoice") & Q.field("tag", "unpaid"))
+print(result.total)
+for doc in result.documents or []:
+    print(doc.title)
+```
+
+See [Search](resources/search.md) and [Search Query](concepts/search_query.md) for details.
+
+### `paperless.share_link_bundles`
+
+Group several documents into one shareable archive. Supports full CRUD plus a
+`rebuild()` action:
+
+```python
+from pypaperless.models.types import ShareLinkFileVersion
+
+draft = paperless.share_link_bundles.create(
+    document_ids=[42, 43],
     file_version=ShareLinkFileVersion.ARCHIVE,
 )
-new_id = await paperless.share_links.save(draft)
-link = await paperless.share_links(new_id)
-print(link.slug)  # e.g. "abc123xyz"
-
-await paperless.share_links.delete(link)
+bundle_id = int(await paperless.share_link_bundles.save(draft))
+bundle = await paperless.share_link_bundles.rebuild(bundle_id)
+print(bundle.status)
 ```
 
-Document model instances also expose a `share_links()` shortcut:
+See [Share Link Bundles](resources/share_link_bundles.md) for details.
 
-```python
-doc = await paperless.documents(42)
-links = await doc.share_links()
-```
-
-See [Share Links](resources/share_links.md) for details.
+!!! note
+    `paperless.share_links` itself is **not** new - it already existed in v5 with
+    full CRUD. Only the v6 CRUD call pattern changed, as described under
+    [CRUD](#crud).
 
 ### `paperless.documents.history`
 
@@ -641,10 +659,54 @@ await paperless.documents.bulk_edit.merge(
     metadata_document_id=10,
     delete_originals=True,
 )
+
+# PDF page operations and password removal
+await paperless.documents.bulk_edit.edit_pdf(42, [{"page": 1, "rotate": 90}])
+await paperless.documents.bulk_edit.remove_password([5, 6], password="secret")
 ```
 
 Raises `BulkEditError` (a `ResponseError` subclass) when the API returns a non-OK
 result.
+
+### `paperless.documents.chat`
+
+An LLM-backed chat query, optionally scoped to one document. Requires AI to be
+enabled on the Paperless-ngx side (`config.ai_enabled`):
+
+```python
+response = await paperless.documents.chat("What is this invoice about?", 42)
+print(response.q)
+```
+
+Note that the answer itself is streamed server-side — the parsed response only echoes
+the query. See [Chat](concepts/documents.md#chat).
+
+### `paperless.documents.ai_suggestions`
+
+AI-generated classifier suggestions, distinct from the rule-based
+`documents.suggestions`:
+
+```python
+result = await paperless.documents.ai_suggestions(42)
+print(result.title, result.suggested_tags, result.suggested_correspondents)
+```
+
+### `paperless.documents.versions` and `paperless.documents.root`
+
+Documents can now carry multiple file versions:
+
+```python
+with open("updated.pdf", "rb") as fh:
+    await paperless.documents.versions.upload(fh, version_label="v2", pk=42)
+
+await paperless.documents.versions.update(1, version_label="final", pk=42)
+await paperless.documents.versions.delete(1, pk=42)
+
+root = await paperless.documents.root(42)
+print(root.root_id)
+```
+
+See the [Documents concept page](concepts/documents.md#document-versions) for details.
 
 ### `paperless.bulk_edit_objects`
 

@@ -82,15 +82,15 @@ class _NameIdFilters(_IdFilters, _NameFilters, total=False):
 
 
 class CorrespondentFilters(_NameIdFilters, total=False):
-    """Filters for :attr:`Paperless.correspondents`."""
+    """Filters for :attr:`PaperlessClient.correspondents`."""
 
 
 class CustomFieldFilters(_NameIdFilters, total=False):
-    """Filters for :attr:`Paperless.custom_fields`."""
+    """Filters for :attr:`PaperlessClient.custom_fields`."""
 
 
 class DocumentFilters(_IdFilters, _CreatedFilters, total=False):
-    """Filters for :attr:`Paperless.documents`.
+    """Filters for :attr:`PaperlessClient.documents`.
 
     These map 1-to-1 to the ``DocumentFilterSet`` in paperless-ngx.
     """
@@ -194,33 +194,33 @@ class DocumentFilters(_IdFilters, _CreatedFilters, total=False):
 
 
 class DocumentTypeFilters(_NameIdFilters, total=False):
-    """Filters for :attr:`Paperless.document_types`."""
+    """Filters for :attr:`PaperlessClient.document_types`."""
 
 
 class GroupFilters(_NameFilters, total=False):
-    """Filters for :attr:`Paperless.groups`."""
+    """Filters for :attr:`PaperlessClient.groups`."""
 
 
 class ProcessedMailFilters(TypedDict, total=False):
-    """Filters for :attr:`Paperless.processed_mail`."""
+    """Filters for :attr:`PaperlessClient.processed_mail`."""
 
     rule: int  # must be an existing mail rule pk, the API rejects unknown ones with 400
     status: str  # free CharField upstream, values are upper-case: "SUCCESS", "FAILED", …
 
 
 class ShareLinkFilters(_CreatedFilters, _ExpirationFilters, total=False):
-    """Filters for :attr:`Paperless.share_links`."""
+    """Filters for :attr:`PaperlessClient.share_links`."""
 
 
 class ShareLinkBundleFilters(_CreatedFilters, _ExpirationFilters, total=False):
-    """Filters for :attr:`Paperless.share_link_bundles`."""
+    """Filters for :attr:`PaperlessClient.share_link_bundles`."""
 
     documents: int
     status: ShareLinkBundleStatus | str
 
 
 class StoragePathFilters(_NameIdFilters, total=False):
-    """Filters for :attr:`Paperless.storage_paths`."""
+    """Filters for :attr:`PaperlessClient.storage_paths`."""
 
     path__icontains: str
     path__iendswith: str
@@ -229,13 +229,13 @@ class StoragePathFilters(_NameIdFilters, total=False):
 
 
 class TagFilters(_NameIdFilters, total=False):
-    """Filters for :attr:`Paperless.tags`."""
+    """Filters for :attr:`PaperlessClient.tags`."""
 
     is_root: bool
 
 
 class TaskFilters(TypedDict, total=False):
-    """Filters for :attr:`Paperless.tasks` and :meth:`TaskService.active`."""
+    """Filters for :attr:`PaperlessClient.tasks` and :meth:`TaskService.active`."""
 
     acknowledged: bool
     date_created_after: str
@@ -257,7 +257,7 @@ class TaskSummaryFilters(TaskFilters, total=False):
 
 
 class UserFilters(TypedDict, total=False):
-    """Filters for :attr:`Paperless.users`."""
+    """Filters for :attr:`PaperlessClient.users`."""
 
     username__icontains: str
     username__iendswith: str

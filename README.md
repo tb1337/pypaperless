@@ -31,7 +31,7 @@
 | **Async iteration & paging**   | Iterate over all items or page-by-page; server-side filtering via `filter()`                                                                                    |
 | **Document operations**        | Upload, download, search (full-text & advanced), notes, suggestions, metadata                                                                                   |
 | **Custom field system**        | Rich typed access to custom field values — read, write, remove with caching                                                                                     |
-| **Token generation**           | Static helper to exchange username + password for an API token                                                                                                  |
+| **Token generation**           | `generate_api_token()` helper to exchange username + password for an API token                                                                                  |
 | **Custom HTTP client**         | Bring your own `httpx.AsyncClient` for full control over timeouts, proxies, TLS, …                                                                              |
 
 ## Quick example

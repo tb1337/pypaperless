@@ -4,7 +4,7 @@ Mail rules define how Paperless-ngx processes incoming emails from a mail accoun
 
 ## Model
 
-See [`pypaperless/models/mails/rules.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/mails/rules.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/mails/rules.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/mails/rules.py) for all fields and types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 

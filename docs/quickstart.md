@@ -120,8 +120,8 @@ from pypaperless import PaperlessClient
 
 async with PaperlessClient("localhost:8000", "your-api-token") as paperless:
     print(paperless.is_initialized)  # True
-    print(paperless.host_version)  # e.g. "2.15.0"
-    print(paperless.host_api_version)  # e.g. 9
+    print(paperless.host_version)  # e.g. "3.0.0"
+    print(paperless.host_api_version)  # e.g. 10
 ```
 
 ---

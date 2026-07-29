@@ -4,7 +4,7 @@ Custom fields let you attach arbitrary typed metadata to documents. This page co
 
 ## Models
 
-See [`pypaperless/models/custom_fields.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/custom_fields.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/paperless-api/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
+See [`pypaperless/models/custom_fields.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/custom_fields.py) for all fields and [`pypaperless/models/types.py`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/types.py) for enum and filter types, and the [Paperless-ngx API docs](https://docs.paperless-ngx.com/api/) for the upstream schema.
 
 ## Fetch one
 
