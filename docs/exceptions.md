@@ -214,7 +214,7 @@ key — that is, neither bound via a `Document` instance nor passed as `pk`. Thi
 from pypaperless.exceptions import PrimaryKeyRequiredError
 
 try:
-    await paperless.documents.history()   # no pk, no bound document
+    await paperless.documents.history()  # no pk, no bound document
 except PrimaryKeyRequiredError:
     print("Pass the document pk: paperless.documents.history(42)")
 ```
