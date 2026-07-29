@@ -136,10 +136,14 @@ Filters are task-local - concurrent asyncio tasks filtering the same service
 do not interfere with each other.
 
 !!! note "Resources without a typed filter set"
-    `saved_views`, `mail_accounts`, `mail_rules`, `processed_mail` and `workflows`
+    `saved_views`, `mail_accounts`, `mail_rules`, `trash` and `workflows`
     (including `workflows.triggers` and `workflows.actions`) have no filter
     TypedDict of their own, so `filter()` accepts no keys there. Iterate them
     directly and narrow the result client-side.
+
+    For `trash` that is a server-side limitation rather than a gap: `/api/trash/`
+    declares no query parameters and silently returns the full trash when
+    filters are passed.
 
 ---
 
