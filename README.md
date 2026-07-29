@@ -81,7 +81,8 @@ Full documentation is available **[here][docs-url]**.
 | >= v4.x         | >= 2.15         | 3.12   |                                         |
 | < v4.0          | < 2.15          | 3.11   | Incompatible with Paperless-ngx >= 2.15 |
 
-> **Recommendation:** Keep both *Paperless-ngx* and **pypaperless** up to date to benefit from the latest API features and bug fixes.
+> [!TIP]
+> Keep both *Paperless-ngx* and **pypaperless** up to date to benefit from the latest API features and bug fixes.
 
 ## Authors & contributors
 

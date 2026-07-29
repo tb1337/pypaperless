@@ -1,14 +1,16 @@
 ---
 name: Feature Request
 description: Suggest an idea or enhancement for pypaperless
-title: '[FEATURE] '
+title: "[FEATURE] "
 body:
   - type: markdown
     attributes:
       value: |
         ## ⚠️ Note on Response Times
 
-        I'm currently on parental leave and available only on a limited basis. If you're able to implement this feature and submit a pull request, that would be greatly appreciated and will help get this feature added much faster! 🙏
+        pypaperless is a private side project. I'm a family father with a full-time job, so replies can sometimes take a while - but I will always reply. Thanks for your patience! 🙏
+
+        If you're able to implement this feature and submit a pull request, that would be greatly appreciated and will help get it added much faster.
 
   - type: textarea
     id: feature-description

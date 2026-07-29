@@ -2,5 +2,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: 📖 Documentation
-    url: https://github.com/tb1337/pypaperless/tree/main/docs
+    url: https://pypaperless.docs.tbsch.de
     about: Check the documentation for guides and examples
