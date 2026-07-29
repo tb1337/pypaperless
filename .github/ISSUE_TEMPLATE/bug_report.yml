@@ -1,14 +1,16 @@
 ---
 name: Bug Report
 description: Report a bug or issue with pypaperless
-title: '[BUG] '
+title: "[BUG] "
 body:
   - type: markdown
     attributes:
       value: |
         ## ⚠️ Note on Response Times
 
-        I'm currently on parental leave and available only on a limited basis. If you're able to investigate and submit a pull request with a fix, that would be greatly appreciated and will significantly speed up the resolution! 🙏
+        pypaperless is a private side project. I'm a family father with a full-time job, so replies can sometimes take a while - but I will always reply. Thanks for your patience! 🙏
+
+        If you're able to investigate and submit a pull request with a fix, that would be greatly appreciated and will significantly speed up the resolution.
 
   - type: textarea
     id: bug-description
