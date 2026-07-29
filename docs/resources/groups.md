@@ -10,7 +10,7 @@ See [`pypaperless/models/permissions/groups.py`](https://github.com/tb1337/pypap
 
 ```python
 group = await paperless.groups(2)
-print(group.name)         # "Administrators"
+print(group.name)  # "Administrators"
 print(group.permissions)  # ["view_document", "change_document", ...]
 ```
 

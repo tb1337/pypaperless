@@ -19,14 +19,23 @@ print(f"{len(trashed)} document(s) in trash")
 
 ## Filter
 
+`/api/trash/` declares no query filters. `filter()` therefore only accepts the pagination
+parameters, and passing document filters has no effect — the endpoint silently returns the
+full trash:
+
 ```python
-# Trashed documents matching a title substring
-async with paperless.trash.filter(title__icontains="invoice") as ctx:
+# Only page / page_size are honoured here
+async with paperless.trash.filter(page_size=25) as ctx:
     async for doc in ctx:
         print(doc.id, doc.title)
 ```
 
-`filter()` accepts the same parameters as `paperless.documents.filter()` — see [`DocumentFilters`](https://github.com/tb1337/pypaperless/blob/main/pypaperless/models/filters.py) for all available keys.
+Narrow the result set client-side instead:
+
+```python
+trashed = await paperless.trash.as_list()
+invoices = [doc for doc in trashed if "invoice" in (doc.title or "").lower()]
+```
 
 ## Restore
 

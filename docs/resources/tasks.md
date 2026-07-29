@@ -14,8 +14,8 @@ The primary use-case is monitoring a document upload by its task UUID:
 # task_uuid was returned by paperless.documents.save(draft)
 task = await paperless.tasks(task_uuid)
 
-print(task.status)                 # TaskStatus.PENDING / STARTED / SUCCESS / FAILURE
-print(task.related_document_ids)   # [42]  - list of document pks once finished
+print(task.status)  # TaskStatus.PENDING / STARTED / SUCCESS / FAILURE
+print(task.related_document_ids)  # [42]  - list of document pks once finished
 ```
 
 ## Fetch by primary key
@@ -75,6 +75,19 @@ async with paperless.tasks.filter(
 ) as ctx:
     async for task in ctx:
         print(task.task_id)
+```
+
+`name` and `result` are free-text searches, not exact matches. `name` matches the input
+filename as well as the task type and trigger source labels; `result` matches the result
+reason, the error message and the document id:
+
+```python
+async with paperless.tasks.filter(name="invoice.pdf") as ctx:
+    async for task in ctx:
+        print(task.task_id, task.status)
+
+async with paperless.tasks.filter(result="timeout") as ctx:
+    failed = await ctx.as_list()
 ```
 
 ## Active tasks

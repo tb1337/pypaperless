@@ -10,9 +10,9 @@ See [`pypaperless/models/mails/accounts.py`](https://github.com/tb1337/pypaperle
 
 ```python
 account = await paperless.mail_accounts(1)
-print(account.name)        # "My Gmail"
-print(account.imap_server) # "imap.gmail.com"
-print(account.username)    # "user@gmail.com"
+print(account.name)  # "My Gmail"
+print(account.imap_server)  # "imap.gmail.com"
+print(account.username)  # "user@gmail.com"
 ```
 
 ## Iterate
@@ -43,7 +43,7 @@ await paperless.mail_accounts.process(1)
 ```python
 async with paperless.mail_accounts.with_permissions():
     account = await paperless.mail_accounts(1)
-    print(account.owner)        # owner user id
+    print(account.owner)  # owner user id
     print(account.permissions)  # Permissions
 ```
 

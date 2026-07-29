@@ -10,8 +10,8 @@ See [`pypaperless/models/tags.py`](https://github.com/tb1337/pypaperless/blob/ma
 
 ```python
 tag = await paperless.tags(5)
-print(tag.name)            # "Invoice"
-print(tag.color)           # "#a6cee3"
+print(tag.name)  # "Invoice"
+print(tag.color)  # "#a6cee3"
 print(tag.document_count)  # 38
 ```
 
@@ -35,7 +35,7 @@ Tags can be nested. `parent` holds the parent tag's id (`None` for a top-level t
 
 ```python
 tag = await paperless.tags(5)
-print(tag.parent)                 # 2, or None for a root tag
+print(tag.parent)  # 2, or None for a root tag
 
 for child in tag.children or []:
     print(child.id, child.name)
@@ -95,7 +95,7 @@ Raises `DeletionError` on failure. Pass `silent_fail=True` to suppress it.
 ```python
 async with paperless.tags.with_permissions():
     tag = await paperless.tags(5)
-    print(tag.owner)        # owner user id
+    print(tag.owner)  # owner user id
     print(tag.permissions)  # Permissions
 ```
 

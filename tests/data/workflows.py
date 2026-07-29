@@ -125,24 +125,19 @@ DATA_WORKFLOWS = {
     ],
 }
 
+_ACTIONS = [action for wf in DATA_WORKFLOWS["results"] for action in wf["actions"]]
+_TRIGGERS = [trigger for wf in DATA_WORKFLOWS["results"] for trigger in wf["triggers"]]
+
 DATA_WORKFLOW_ACTIONS = {
-    "count": 0,
+    "count": len(_ACTIONS),
     "next": None,
     "previous": None,
-    "results": [],
+    "results": _ACTIONS,
 }
-for wf in DATA_WORKFLOWS["results"]:
-    DATA_WORKFLOW_ACTIONS["count"] += 1
-    for act in wf["actions"]:
-        DATA_WORKFLOW_ACTIONS["results"].append(act)
 
 DATA_WORKFLOW_TRIGGERS = {
-    "count": 0,
+    "count": len(_TRIGGERS),
     "next": None,
     "previous": None,
-    "results": [],
+    "results": _TRIGGERS,
 }
-for wf in DATA_WORKFLOWS["results"]:
-    DATA_WORKFLOW_TRIGGERS["count"] += 1
-    for act in wf["triggers"]:
-        DATA_WORKFLOW_TRIGGERS["results"].append(act)

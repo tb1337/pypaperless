@@ -25,11 +25,7 @@ async with paperless.documents.filter(custom_field_query=str(q)) as docs:
 Use `&`, `|` and `~` to build boolean queries. Chained `&` and `|` are automatically flattened:
 
 ```python
-q = (
-    Q("Status", "exact", "open")
-    & Q("Amount", "gte", 100)
-    & ~Q("Archived", "exact", True)
-)
+q = Q("Status", "exact", "open") & Q("Amount", "gte", 100) & ~Q("Archived", "exact", True)
 # Serialises to:
 # ["AND", [["Status","exact","open"], ["Amount","gte",100], ["NOT",["Archived","exact",true]]]]
 ```
@@ -37,11 +33,7 @@ q = (
 OR across multiple categories:
 
 ```python
-q = (
-    Q("Category", "exact", "A")
-    | Q("Category", "exact", "B")
-    | Q("Category", "exact", "C")
-)
+q = Q("Category", "exact", "A") | Q("Category", "exact", "B") | Q("Category", "exact", "C")
 ```
 
 ---
@@ -51,7 +43,7 @@ q = (
 `field` can be either the **integer ID** or the **name string**:
 
 ```python
-Q(42, "exists", True)        # by ID
+Q(42, "exists", True)  # by ID
 Q("Invoice Amount", "gte", 100)  # by name
 ```
 
@@ -78,7 +70,7 @@ checker accepts as the second argument to `CustomFieldQuery(...)`.
 `exists` is the idiomatic way to check field presence:
 
 ```python
-Q("Due Date", "exists", True)   # document has the field
+Q("Due Date", "exists", True)  # document has the field
 Q("Due Date", "exists", False)  # document does not have the field
 ```
 

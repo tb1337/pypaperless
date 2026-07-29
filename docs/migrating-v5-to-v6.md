@@ -74,6 +74,7 @@ In v5, the constructor accepted `url`, `token`, and `request_api_version`. In v6
 === "v5"
     ```python
     import aiohttp
+
     paperless = Paperless("http://localhost:8000", "mytoken")
     paperless = Paperless("http://localhost:8000", "mytoken", session=my_session)
     paperless = Paperless("http://localhost:8000", "mytoken", request_args={"ssl": False})
@@ -199,7 +200,7 @@ You can also use the convenience helpers:
 
 ```python
 docs = await paperless.documents.as_list()
-dmap = await paperless.documents.as_dict()   # {pk: Document}
+dmap = await paperless.documents.as_dict()  # {pk: Document}
 ```
 
 !!! note "Removed in API v10"
@@ -226,9 +227,9 @@ the **service** level. Model-level shortcuts (`doc.update()`, `doc.delete()`, `d
     ```python
     doc = await paperless.documents(42)
     doc.title = "New Title"
-    await paperless.update(doc)   # routes to DocumentService.update()
+    await paperless.update(doc)  # routes to DocumentService.update()
 
-    await paperless.delete(doc)   # routes to DocumentService.delete()
+    await paperless.delete(doc)  # routes to DocumentService.delete()
 
     draft = paperless.tags.create(name="urgent")
     pk = await paperless.save(draft)  # routes to TagService.save()
@@ -280,8 +281,8 @@ v6 provides two equivalent ways to perform CRUD:
     error:
 
     ```python
-    doc.created = "2024-08-13"   # coerced to datetime.date(2024, 8, 13)
-    doc.created = "not a date"   # ValidationError - right here
+    doc.created = "2024-08-13"  # coerced to datetime.date(2024, 8, 13)
+    doc.created = "not a date"  # ValidationError - right here
     ```
 
 ### delete()
@@ -642,6 +643,7 @@ await paperless.documents.bulk_edit.modify_custom_fields(
 
 # Permissions
 from pypaperless.models.types import Permissions
+
 await paperless.documents.bulk_edit.set_permissions(
     [1, 2, 3],
     owner=1,
@@ -649,7 +651,7 @@ await paperless.documents.bulk_edit.set_permissions(
 )
 
 # Document operations
-await paperless.documents.bulk_edit.delete([10, 11])      # move to trash
+await paperless.documents.bulk_edit.delete([10, 11])  # move to trash
 await paperless.documents.bulk_edit.reprocess([1, 2, 3])  # re-run OCR
 await paperless.documents.bulk_edit.rotate([1, 2], 90)
 await paperless.documents.bulk_edit.merge(

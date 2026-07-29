@@ -11,8 +11,9 @@ from pytest_httpx import HTTPXMock
 from pypaperless import PaperlessClient
 from pypaperless.const import EndpointPath
 from pypaperless.exceptions import DeletionError, DraftFieldRequiredError, NotFoundError
-from pypaperless.models import Page
+from pypaperless.models import Page, Tag
 from pypaperless.models.base import PaperlessModel
+from pypaperless.models.mixins.data_fields import MatchingAlgorithm
 from pypaperless.models.types import Permissions
 from pypaperless.services import mixins as svc_mixins
 from pypaperless.services.base import ResourceService
@@ -59,6 +60,7 @@ class _SharedServiceTests:
         page = await anext(aiter(getattr(paperless, mapping.resource).pages(1)))
         assert isinstance(page, Page)
         assert isinstance(page.items, list)
+        assert len(page.items) == len(mapping.data["results"])
         for item in page.items:
             assert isinstance(item, mapping.model_cls)
 
@@ -76,7 +78,9 @@ class _SharedServiceTests:
             status_code=200,
             json=mapping.data,
         )
-        async for item in getattr(paperless, mapping.resource):
+        items = [item async for item in getattr(paperless, mapping.resource)]
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
             assert isinstance(item, mapping.model_cls)
 
     async def test_call(
@@ -92,7 +96,6 @@ class _SharedServiceTests:
             json=mapping.data["results"][0],
         )
         item = await getattr(paperless, mapping.resource)(1)
-        assert item
         assert isinstance(item, mapping.model_cls)
         # must raise as 1337 doesn't exist
         httpx_mock.add_response(
@@ -145,6 +148,7 @@ class TestReadOnly(_SharedServiceTests):
             json=mapping.data,
         )
         items = await getattr(paperless, mapping.resource).as_dict()
+        assert set(items) == {entry["id"] for entry in mapping.data["results"]}
         for pk, obj in items.items():
             assert isinstance(pk, int)
             assert isinstance(obj, mapping.model_cls)
@@ -164,6 +168,7 @@ class TestReadOnly(_SharedServiceTests):
             json=mapping.data,
         )
         items = await getattr(paperless, mapping.resource).as_list()
+        assert len(items) == len(mapping.data["results"])
         for obj in items:
             assert isinstance(obj, mapping.model_cls)
 
@@ -203,8 +208,16 @@ class TestReadWrite(_SharedServiceTests):
             any_filter_list__in=["1", "2"],
             any_filter_no_list__in="1",
         ) as q:
-            async for item in q:
-                assert isinstance(item, mapping.model_cls)
+            items = [item async for item in q]
+
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
+            assert isinstance(item, mapping.model_cls)
+
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["any_filter_param"] == "1"
+        assert params["any_filter_list__in"] == "1,2"
+        assert params["any_filter_no_list__in"] == "1"
 
     async def test_create(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient, mapping: ResourceTestMapping
@@ -241,11 +254,12 @@ class TestReadWrite(_SharedServiceTests):
         update_value = mapping.update_value
         pk = mapping.data["results"][0]["id"]
         service = getattr(paperless, mapping.resource)
+        single_url = (
+            f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
+        ).format(pk=pk)
         httpx_mock.add_response(
             method="GET",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json=mapping.data["results"][0],
         )
@@ -253,27 +267,27 @@ class TestReadWrite(_SharedServiceTests):
         setattr(to_update, update_field, update_value)
         httpx_mock.add_response(
             method="PATCH",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json={**to_update.snapshot, update_field: update_value},
         )
-        await service.update(to_update)
-        assert getattr(to_update, update_field) == update_value
-        # no-op update
-        assert not await service.update(to_update)
+        assert await service.update(to_update) is True
+        assert json_mod.loads(httpx_mock.get_requests()[-1].content) == {update_field: update_value}
+        # no-op update must not hit the API at all
+        sent = len(httpx_mock.get_requests())
+        assert await service.update(to_update) is False
+        assert len(httpx_mock.get_requests()) == sent
         # force full update
         setattr(to_update, update_field, update_value)
         httpx_mock.add_response(
             method="PUT",
-            url=(
-                f"{PAPERLESS_TEST_URL}{EndpointPath[(mapping.resource + '_single').upper()]}"
-            ).format(pk=pk),
+            url=single_url,
             status_code=200,
             json={**to_update.snapshot, update_field: update_value},
         )
-        await service.update(to_update, only_changed=False)
+        expected_full = to_update.api_dump()
+        assert await service.update(to_update, only_changed=False) is True
+        assert json_mod.loads(httpx_mock.get_requests()[-1].content) == expected_full
         assert getattr(to_update, update_field) == update_value
 
     async def test_delete(
@@ -354,6 +368,7 @@ class TestSecurableService:
             json={**mapping.data["results"][0], "permissions": DATA_OBJECT_PERMISSIONS},
         )
         item = await getattr(paperless, mapping.resource)(1)
+        assert httpx_mock.get_requests()[-1].url.params["full_perms"] == "true"
         assert item.has_permissions
         assert isinstance(item.permissions, Permissions)
         # iterator with permissions
@@ -373,7 +388,10 @@ class TestSecurableService:
                 ],
             },
         )
-        async for item in getattr(paperless, mapping.resource):
+        items = [item async for item in getattr(paperless, mapping.resource)]
+        assert httpx_mock.get_requests()[-1].url.params["full_perms"] == "true"
+        assert len(items) == len(mapping.data["results"])
+        for item in items:
             assert isinstance(item, mapping.model_cls)
             assert item.has_permissions
             assert isinstance(item.permissions, Permissions)
@@ -448,11 +466,6 @@ class TestSecurableService:
             assert isinstance(item.permissions, Permissions)
 
         assert not service.request_permissions
-
-
-# ---------------------------------------------------------------------------
-# Standalone model / mixin unit tests
-# ---------------------------------------------------------------------------
 
 
 def test_permissions_from_existing_instance() -> None:
@@ -547,3 +560,63 @@ async def test_filter_contexts_isolated_across_tasks(
 
     sent = {req.url.params["name__icontains"] for req in httpx_mock.get_requests()[-2:]}
     assert sent == {"acme", "globex"}
+
+
+async def test_processed_mail_filter(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+    """ProcessedMailService.filter() forwards its typed keys into the query string."""
+    httpx_mock.add_response(
+        method="GET",
+        url=re.compile(r"^" f"{PAPERLESS_TEST_URL}{EndpointPath.PROCESSED_MAIL}" r"\?.*$"),
+        status_code=200,
+        json=PROCESSED_MAIL_MAP.data,
+    )
+    async with paperless.processed_mail.filter(rule=1, status="FAILED") as filtered:
+        items = await filtered.as_list()
+
+    assert len(items) == len(PROCESSED_MAIL_MAP.data["results"])
+    params = httpx_mock.get_requests()[-1].url.params
+    assert params["rule"] == "1"
+    assert params["status"] == "FAILED"
+
+
+def test_tag_with_nested_children(api: PaperlessClient) -> None:
+    """Tag._validate_children builds nested Tag instances from raw dict children."""
+    tag_data = {
+        "id": 1,
+        "slug": "parent",
+        "name": "Parent Tag",
+        "color": "#000000",
+        "text_color": "#ffffff",
+        "matching_algorithm": 2,
+        "children": [
+            {
+                "id": 2,
+                "slug": "child",
+                "name": "Child Tag",
+                "color": "#000000",
+                "text_color": "#ffffff",
+                "matching_algorithm": 1,
+                "children": [
+                    {
+                        "id": 3,
+                        "slug": "grandchild",
+                        "name": "Grandchild Tag",
+                        "color": "#000000",
+                        "text_color": "#ffffff",
+                        "matching_algorithm": 6,
+                    }
+                ],
+            }
+        ],
+    }
+    tag = Tag.from_data(api._runtime, data=tag_data)
+    assert tag.name == "Parent Tag"
+    assert isinstance(tag.children, list)
+    child = tag.children[0]
+    assert isinstance(child, Tag)
+    assert child.name == "Child Tag"
+    assert child.matching_algorithm == MatchingAlgorithm.ANY
+    assert isinstance(child.children, list)
+    assert isinstance(child.children[0], Tag)
+    assert child.children[0].name == "Grandchild Tag"
+    assert child.children[0].matching_algorithm == MatchingAlgorithm.AUTO

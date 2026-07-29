@@ -71,24 +71,24 @@ document's primary key pre-filled:
 doc = await paperless.documents(42)
 
 # notes: cache-first by default, force_request=True to re-fetch from API
-notes      = await doc.notes()                    # from cache (no HTTP request)
-notes      = await doc.notes(force_request=True)  # fresh from API
+notes = await doc.notes()  # from cache (no HTTP request)
+notes = await doc.notes(force_request=True)  # fresh from API
 note_draft = doc.notes.create(note="Checked.")
-note_id    = await doc.notes.save(note_draft)
-await doc.notes.delete(notes[0])        # model instance
-await doc.notes.delete(notes[0].id)     # integer shorthand (document pk implicit)
+note_id = await doc.notes.save(note_draft)
+await doc.notes.delete(notes[0])  # model instance
+await doc.notes.delete(notes[0].id)  # integer shorthand (document pk implicit)
 
 # history (read-only)
-entries = await doc.history()              # list[DocumentHistory]
+entries = await doc.history()  # list[DocumentHistory]
 
 # share links (read-only from here, use paperless.share_links to create/delete)
-links = await doc.share_links()            # list[ShareLink]
+links = await doc.share_links()  # list[ShareLink]
 
 # AI suggestions (read-only)
-ai = await doc.ai_suggestions()            # DocumentAISuggestions
+ai = await doc.ai_suggestions()  # DocumentAISuggestions
 
 # root document record (read-only)
-root = await doc.root()                    # DocumentRoot
+root = await doc.root()  # DocumentRoot
 
 # versions: upload / relabel / delete a document's file versions (not callable)
 with open("updated.pdf", "rb") as fh:
@@ -105,10 +105,10 @@ All other operations (download, preview, thumbnail, metadata, suggestions, more-
 email, chat) are **service-only** — there are no model-level shortcuts for these:
 
 ```python
-downloaded  = await paperless.documents.download(doc.id)
-preview     = await paperless.documents.preview(doc.id)
-thumbnail   = await paperless.documents.thumbnail(doc.id)
-meta        = await paperless.documents.metadata(doc.id)
+downloaded = await paperless.documents.download(doc.id)
+preview = await paperless.documents.preview(doc.id)
+thumbnail = await paperless.documents.thumbnail(doc.id)
+meta = await paperless.documents.metadata(doc.id)
 suggestions = await paperless.documents.suggestions(doc.id)
 async for similar in paperless.documents.more_like(doc.id):
     print(similar.title)
@@ -121,7 +121,7 @@ answer = await paperless.documents.chat("What is this about?", doc.id)
 ```python
 async with paperless.documents.with_permissions():
     doc = await paperless.documents(42)
-    print(doc.owner)        # owner user id
+    print(doc.owner)  # owner user id
     print(doc.permissions)  # Permissions
 ```
 

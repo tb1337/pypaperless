@@ -1,7 +1,7 @@
 """Share links snapshot."""
 
 DATA_SHARE_LINKS = {
-    "count": 5,
+    "count": 8,
     "next": None,
     "previous": None,
     "results": [

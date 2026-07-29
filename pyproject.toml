@@ -39,7 +39,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest-httpx>=0.36.2",
-    "ruff>=0.15.22",
+    "ruff>=0.16.0",
     "yamllint>=1.38.0",
 ]
 docs = [
@@ -100,6 +100,7 @@ target-version = "py313"
 [tool.ruff.lint]
 ignore = [
   "ANN401", # Opinioated warning on disallowing dynamically typed expressions
+  "CPY001", # Eh what? Disable that annoying one.
   "D203", # Conflicts with other rules
   "D213", # Conflicts with other rules
   "D417", # False positives in some occasions

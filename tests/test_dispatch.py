@@ -1,5 +1,6 @@
 """Tests for the model operation dispatcher."""
 
+from collections.abc import Generator
 from typing import ClassVar
 
 import pytest
@@ -22,19 +23,14 @@ from pypaperless.services.mixins import DeletableService
 from .const import PAPERLESS_TEST_URL
 from .data import DATA_CORRESPONDENTS
 
-# ---------------------------------------------------------------------------
-# Module-level helpers for DispatchableCachedProperty.__set_name__ edge cases
-#
-# Annotation mutation trick: define a function with a valid annotation that
-# mypy can check, then replace __annotations__["return"] at module level with
-# an unresolvable string so get_type_hints() raises NameError at runtime.
-# This lets us cover defensive exception-handling branches without using any
-# suppression comment.
-# ---------------------------------------------------------------------------
+# The helpers below cover DispatchableCachedProperty.__set_name__ edge cases via an
+# annotation mutation trick: declare a return annotation mypy can check, then replace
+# __annotations__["return"] with an unresolvable string so get_type_hints() raises at
+# runtime. That reaches the defensive branches without any suppression comment.
 
 
 def _factory_bad_type_hint(self: object) -> PaperlessService:
-    """Provide a runtime-unresolvable return annotation (exercises L62-63)."""
+    """Provide a runtime-unresolvable return annotation."""
     raise NotImplementedError
 
 
@@ -43,7 +39,7 @@ _factory_bad_type_hint.__annotations__["return"] = "_UndefinedTypeAtRuntime_XYZA
 
 
 def _factory_no_return_annotation(self: object) -> PaperlessService:
-    """Remove return annotation so hints.get('return') is None (exercises L66)."""
+    """Remove return annotation so hints.get('return') is None."""
     raise NotImplementedError
 
 
@@ -52,7 +48,7 @@ del _factory_no_return_annotation.__annotations__["return"]
 
 
 def _factory_base_service_return(self: object) -> PaperlessService:
-    """Return PaperlessService base (no _resource_cls/_draft_cls, exercises L69->67)."""
+    """Return the PaperlessService base, which has neither _resource_cls nor _draft_cls."""
     raise NotImplementedError
 
 
@@ -66,17 +62,17 @@ class _FakeWritableSubSvc(
     ResourceService,
     DeletableService[_FakeDispatchTestModel],
 ):
-    """Writable sub-service with _resource_cls but no _draft_cls (exercises L85->83)."""
+    """Writable sub-service with _resource_cls but no _draft_cls."""
 
     _api_path = "/api/dispatch-fake/"
     _resource = PaperlessResource.DOCUMENTS
 
     _resource_cls = _FakeDispatchTestModel
-    # Deliberately omit _draft_cls so the loop's False branch (L85->83) is taken.
+    # _draft_cls is deliberately omitted so the registration loop skips the draft branch.
 
 
 def _bad_sub_fget(self: object) -> PaperlessService:
-    """Property getter for bad_sub; annotation replaced below (L76-77 coverage)."""
+    """Property getter for bad_sub; its annotation is made unresolvable below."""
     raise NotImplementedError
 
 
@@ -87,23 +83,34 @@ _bad_sub_fget.__annotations__["return"] = "_UndefinedSubTypeAtRuntime_XYZABC"
 class _FakeSvcWithSubProps(PaperlessService):
     """Service with sub-properties exercising __set_name__ sub-discovery edge cases."""
 
-    # bad_sub: annotation is an unresolvable string → get_type_hints raises (L76-77).
+    # bad_sub: annotation is an unresolvable string → get_type_hints raises.
     bad_sub: property = property(_bad_sub_fget)
 
     @property
     def str_sub(self) -> str:
-        """Sub-property returning str — not a PaperlessService subclass (L80)."""
+        """Sub-property returning str — not a PaperlessService subclass."""
         return ""
 
     @property
     def writable_sub(self) -> _FakeWritableSubSvc:
-        """Writable sub-service without _draft_cls — exercises L85->83 branch."""
+        """Writable sub-service without _draft_cls."""
         raise NotImplementedError
 
 
 def _factory_fake_with_sub_props(self: object) -> _FakeSvcWithSubProps:
-    """Return _FakeSvcWithSubProps for __set_name__ sub-discovery edge-case coverage."""
+    """Return _FakeSvcWithSubProps for __set_name__ sub-discovery edge cases."""
     raise NotImplementedError
+
+
+@pytest.fixture(name="restore_registry")
+def restore_registry_fixture() -> Generator[None]:
+    """Undo registry writes made by __set_name__ so later tests see a clean registry."""
+    before = dict(_MODEL_TO_PROP_NAME)
+    try:
+        yield
+    finally:
+        _MODEL_TO_PROP_NAME.clear()
+        _MODEL_TO_PROP_NAME.update(before)
 
 
 class TestDispatcherInit:
@@ -215,55 +222,45 @@ class TestDispatchableCachedPropertyBehavior:
         assert isinstance(result, dispatchable_cached_property)
 
     def test_set_name_silences_type_hints_error(self) -> None:
-        """__set_name__ must return silently when get_type_hints raises (L62-63)."""
+        """__set_name__ must return silently when get_type_hints raises."""
         prop = DispatchableCachedProperty(_factory_bad_type_hint)
         prop.__set_name__(object, "bad_hint_prop")
         assert prop._attr_name == "bad_hint_prop"
 
+    @pytest.mark.usefixtures("restore_registry")
     def test_set_name_skips_non_service_return(self) -> None:
-        """__set_name__ must not touch the registry when return is not a service (L66)."""
+        """__set_name__ must not touch the registry when the return type is not a service."""
         prop = DispatchableCachedProperty(_factory_no_return_annotation)
         before = dict(_MODEL_TO_PROP_NAME)
         prop.__set_name__(object, "no_return_prop")
         assert before == _MODEL_TO_PROP_NAME
 
+    @pytest.mark.usefixtures("restore_registry")
     def test_set_name_handles_service_without_model_cls(self) -> None:
-        """__set_name__ must not crash when _resource_cls/_draft_cls are absent (L69->67).
-
-        PaperlessService base has neither attribute, so both loop iterations take the False branch.
-        """
+        """__set_name__ must not crash when _resource_cls/_draft_cls are absent."""
         prop = DispatchableCachedProperty(_factory_base_service_return)
         before = dict(_MODEL_TO_PROP_NAME)
         prop.__set_name__(object, "base_svc_prop")
         assert before == _MODEL_TO_PROP_NAME
 
-    def test_set_name_sub_prop_silences_type_hints_error(self) -> None:
-        """__set_name__ must silently skip sub-properties with unresolvable annotations (L76-77)."""
-        prop = DispatchableCachedProperty(_factory_fake_with_sub_props)
-        prop.__set_name__(object, "fake_sub_prop_a")
-        assert prop._attr_name == "fake_sub_prop_a"
-        _MODEL_TO_PROP_NAME.pop(_FakeDispatchTestModel, None)
+    @pytest.mark.usefixtures("restore_registry")
+    def test_set_name_sub_prop_discovery(self) -> None:
+        """Sub-property discovery registers only the writable sub-service.
 
-    def test_set_name_sub_prop_skips_non_service(self) -> None:
-        """__set_name__ must skip sub-properties that return a non-PaperlessService type (L80)."""
-        prop = DispatchableCachedProperty(_factory_fake_with_sub_props)
-        prop.__set_name__(object, "fake_sub_prop_b")
-        assert str not in _MODEL_TO_PROP_NAME
-        _MODEL_TO_PROP_NAME.pop(_FakeDispatchTestModel, None)
-
-    def test_set_name_sub_prop_handles_missing_draft_cls(self) -> None:
-        """__set_name__ must handle a writable sub-service with only _resource_cls (L85->83).
-
-        The inner loop's False branch for _draft_cls is taken because _FakeWritableSubSvc
-        has no _draft_cls attribute.
+        ``bad_sub`` has an unresolvable annotation and ``str_sub`` does not return a
+        PaperlessService, so both are skipped; ``writable_sub`` is registered under its
+        _resource_cls even though it has no _draft_cls.
         """
         prop = DispatchableCachedProperty(_factory_fake_with_sub_props)
-        prop.__set_name__(object, "fake_sub_prop_c")
-        assert _MODEL_TO_PROP_NAME.get(_FakeDispatchTestModel) == (
-            "fake_sub_prop_c",
-            "writable_sub",
-        )
-        del _MODEL_TO_PROP_NAME[_FakeDispatchTestModel]
+        prop.__set_name__(object, "fake_sub_prop")
+
+        assert prop._attr_name == "fake_sub_prop"
+        assert _MODEL_TO_PROP_NAME[_FakeDispatchTestModel] == ("fake_sub_prop", "writable_sub")
+        # the skipped sub-properties contributed no entry of their own
+        registered = [
+            key for key, value in _MODEL_TO_PROP_NAME.items() if value[0] == prop._attr_name
+        ]
+        assert registered == [_FakeDispatchTestModel]
 
 
 class TestDispatchGuards:
@@ -275,22 +272,20 @@ class TestDispatchGuards:
         with pytest.raises(DispatchError, match="does not support 'update'"):
             await api._dispatcher.update(note)
 
-    async def test_delete_raises_for_non_deletable_service(self, api: PaperlessClient) -> None:
+    async def test_delete_raises_for_non_deletable_service(
+        self, api: PaperlessClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """delete() must raise DispatchError when the resolved service is not DeletableService."""
-        _MODEL_TO_PROP_NAME[DocumentNote] = ("profile",)
-        try:
-            note = DocumentNote.model_construct(id=1, document=42)
-            with pytest.raises(DispatchError, match="does not support 'delete'"):
-                await api._dispatcher.delete(note)
-        finally:
-            _MODEL_TO_PROP_NAME[DocumentNote] = ("documents", "notes")
+        monkeypatch.setitem(_MODEL_TO_PROP_NAME, DocumentNote, ("profile",))
+        note = DocumentNote.model_construct(id=1, document=42)
+        with pytest.raises(DispatchError, match="does not support 'delete'"):
+            await api._dispatcher.delete(note)
 
-    async def test_save_raises_for_non_creatable_service(self, api: PaperlessClient) -> None:
+    async def test_save_raises_for_non_creatable_service(
+        self, api: PaperlessClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """save() must raise DispatchError when the resolved service is not CreatableService."""
-        _MODEL_TO_PROP_NAME[DocumentNoteDraft] = ("profile",)
-        try:
-            draft = DocumentNoteDraft.model_construct(note="x", document=42)
-            with pytest.raises(DispatchError, match="does not support 'save'"):
-                await api._dispatcher.save(draft)
-        finally:
-            _MODEL_TO_PROP_NAME[DocumentNoteDraft] = ("documents", "notes")
+        monkeypatch.setitem(_MODEL_TO_PROP_NAME, DocumentNoteDraft, ("profile",))
+        draft = DocumentNoteDraft.model_construct(note="x", document=42)
+        with pytest.raises(DispatchError, match="does not support 'save'"):
+            await api._dispatcher.save(draft)

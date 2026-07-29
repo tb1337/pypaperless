@@ -22,10 +22,12 @@ Requires **Python 3.13+**.
 import asyncio
 from pypaperless import PaperlessClient
 
+
 async def main():
     async with PaperlessClient("localhost:8000", "your-api-token") as paperless:
         async for document in paperless.documents:
             print(document.id, document.title)
+
 
 asyncio.run(main())
 ```

@@ -13,11 +13,11 @@ No primary key - call without arguments:
 ```python
 profile = await paperless.profile()
 
-print(profile.email)               # "admin@example.com"
-print(profile.first_name)          # "Admin"
-print(profile.auth_token)          # "3e9505078d32d8ad4ecea00fa0eec8e426622b52"
-print(profile.has_usable_password) # True
-print(profile.is_mfa_enabled)      # False
+print(profile.email)  # "admin@example.com"
+print(profile.first_name)  # "Admin"
+print(profile.auth_token)  # "3e9505078d32d8ad4ecea00fa0eec8e426622b52"
+print(profile.has_usable_password)  # True
+print(profile.is_mfa_enabled)  # False
 
 for account in profile.social_accounts or []:
     print(account.provider, account.name)

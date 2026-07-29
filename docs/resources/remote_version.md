@@ -13,7 +13,7 @@ This is a parameter-free call - there is no primary key:
 ```python
 rv = await paperless.remote_version()
 
-print(rv.version)           # "2.13.5"
+print(rv.version)  # "2.13.5"
 print(rv.update_available)  # True / False
 
 if rv.update_available:

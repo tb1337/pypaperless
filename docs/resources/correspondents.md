@@ -10,7 +10,7 @@ See [`pypaperless/models/correspondents.py`](https://github.com/tb1337/pypaperle
 
 ```python
 correspondent = await paperless.correspondents(7)
-print(correspondent.name)            # "ACME Corp"
+print(correspondent.name)  # "ACME Corp"
 print(correspondent.document_count)  # 42
 ```
 
@@ -24,10 +24,7 @@ async for c in paperless.correspondents:
 all_correspondents = await paperless.correspondents.as_list()
 
 # Fetch only a subset matching a filter
-filtered = [
-    c async for c in paperless.correspondents
-    if c.document_count and c.document_count > 0
-]
+filtered = [c async for c in paperless.correspondents if c.document_count and c.document_count > 0]
 ```
 
 ## Create
@@ -80,7 +77,7 @@ Raises `DeletionError` on failure. Pass `silent_fail=True` to suppress it.
 ```python
 async with paperless.correspondents.with_permissions():
     c = await paperless.correspondents(7)
-    print(c.owner)        # owner user id
+    print(c.owner)  # owner user id
     print(c.permissions)  # Permissions
 ```
 

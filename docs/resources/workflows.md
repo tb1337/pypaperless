@@ -12,7 +12,7 @@ See [`pypaperless/models/workflows/workflow.py`](https://github.com/tb1337/pypap
 
 ```python
 workflow = await paperless.workflows(1)
-print(workflow.name)     # "Auto-tag invoices"
+print(workflow.name)  # "Auto-tag invoices"
 print(workflow.enabled)  # True
 ```
 
@@ -33,8 +33,8 @@ Triggers are accessed via `paperless.workflows.triggers`:
 ```python
 # Fetch a trigger by id
 trigger = await paperless.workflows.triggers(3)
-print(trigger.type)            # WorkflowTriggerType.CONSUMPTION
-print(trigger.filter_filename) # "invoice_*.pdf"
+print(trigger.type)  # WorkflowTriggerType.CONSUMPTION
+print(trigger.filter_filename)  # "invoice_*.pdf"
 
 # Iterate all triggers
 async for trigger in paperless.workflows.triggers:
@@ -48,9 +48,9 @@ Actions are accessed via `paperless.workflows.actions`:
 ```python
 # Fetch an action by id
 action = await paperless.workflows.actions(5)
-print(action.type)                 # WorkflowActionType.ASSIGNMENT
-print(action.assign_tags)          # [1, 3]
-print(action.assign_correspondent) # 7
+print(action.type)  # WorkflowActionType.ASSIGNMENT
+print(action.assign_tags)  # [1, 3]
+print(action.assign_correspondent)  # 7
 
 # Iterate all actions
 async for action in paperless.workflows.actions:

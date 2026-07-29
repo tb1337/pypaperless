@@ -47,7 +47,7 @@ from .workflows import DATA_WORKFLOW_ACTIONS, DATA_WORKFLOW_TRIGGERS, DATA_WORKF
 
 
 def _read_schema() -> dict:
-    filepath = Path("tests/data/schema.json")
+    filepath = Path(__file__).parent / "schema.json"
     with Path.open(filepath, mode="r", encoding="utf-8") as file:
         return json.load(file)
 

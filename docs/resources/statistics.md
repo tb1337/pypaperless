@@ -13,9 +13,9 @@ No primary key - call without arguments:
 ```python
 stats = await paperless.statistics()
 
-print(stats.documents_total)      # 1024
-print(stats.documents_inbox)      # 3
-print(stats.current_asn)          # 512
+print(stats.documents_total)  # 1024
+print(stats.documents_inbox)  # 3
+print(stats.current_asn)  # 512
 print(stats.correspondent_count)  # 47
 
 for ft in stats.document_file_type_counts or []:

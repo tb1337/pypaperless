@@ -98,6 +98,7 @@ class PaperlessTransport:
         self,
         method: str,
         path: str,
+        *,
         json: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         form: dict[str, Any] | None = None,

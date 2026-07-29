@@ -17,8 +17,7 @@ from pypaperless.builders.custom_fields import (
     _CustomFieldQueryOr,
 )
 from pypaperless.const import EndpointPath
-from pypaperless.models import CustomField, Tag
-from pypaperless.models.mixins.data_fields import MatchingAlgorithm
+from pypaperless.models import CustomField
 from pypaperless.models.types import (
     CustomFieldBooleanValue,
     CustomFieldDateValue,
@@ -33,10 +32,6 @@ from pypaperless.models.types import (
 from .const import PAPERLESS_TEST_URL
 from .data import DATA_CUSTOM_FIELDS
 
-# ---------------------------------------------------------------------------
-# CustomField value types
-# ---------------------------------------------------------------------------
-
 
 async def test_draft_value_without_cache(paperless: PaperlessClient) -> None:
     """draft_value() returns a plain object when the custom field cache is empty."""
@@ -46,6 +41,8 @@ async def test_draft_value_without_cache(paperless: PaperlessClient) -> None:
     )
     field_value = custom_field.draft_value(1337)
     assert type(field_value) is CustomFieldValue
+    assert field_value.field == custom_field.id
+    assert field_value.value == 1337
 
 
 async def test_draft_value_with_cache(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -65,7 +62,8 @@ async def test_draft_value_with_cache(httpx_mock: HTTPXMock, paperless: Paperles
         data=DATA_CUSTOM_FIELDS["results"][5],
     )
     field_value = custom_field.draft_value(1337, expected_type=CustomFieldIntegerValue)
-    assert isinstance(field_value, CustomFieldIntegerValue)
+    assert field_value.field == custom_field.id
+    assert field_value.value == 1337
 
 
 @pytest.mark.parametrize(
@@ -75,7 +73,7 @@ async def test_draft_value_with_cache(httpx_mock: HTTPXMock, paperless: Paperles
 )
 def test_date_value_parses_to_date(value_str: str) -> None:
     """CustomFieldDateValue accepts both ISO date strings and datetime strings, returning a date."""
-    assert isinstance(CustomFieldDateValue(value=value_str).value, date)
+    assert CustomFieldDateValue(value=value_str).value == date(1900, 1, 2)
 
 
 def test_monetary_value_parsing() -> None:
@@ -120,15 +118,10 @@ def test_select_value_labels() -> None:
             ]
         },
     )
-    assert isinstance(test.labels, list)
+    assert [option.label for option in test.labels] == ["label1", "label2"]
     assert test.label == "label2"
     test.extra_data = None
     assert test.label is None
-
-
-# ---------------------------------------------------------------------------
-# CustomFieldQuery DSL
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -226,51 +219,8 @@ def test_date_value_accepts_date_object() -> None:
     assert field.value == d
 
 
-def test_tag_with_nested_children(api: PaperlessClient) -> None:
-    """Tag._validate_children builds nested Tag instances from raw dict children."""
-    tag_data = {
-        "id": 1,
-        "slug": "parent",
-        "name": "Parent Tag",
-        "color": "#000000",
-        "text_color": "#ffffff",
-        "matching_algorithm": 2,
-        "children": [
-            {
-                "id": 2,
-                "slug": "child",
-                "name": "Child Tag",
-                "color": "#000000",
-                "text_color": "#ffffff",
-                "matching_algorithm": 1,
-                "children": [
-                    {
-                        "id": 3,
-                        "slug": "grandchild",
-                        "name": "Grandchild Tag",
-                        "color": "#000000",
-                        "text_color": "#ffffff",
-                        "matching_algorithm": 6,
-                    }
-                ],
-            }
-        ],
-    }
-    tag = Tag.from_data(api._runtime, data=tag_data)
-    assert tag.name == "Parent Tag"
-    assert isinstance(tag.children, list)
-    child = tag.children[0]
-    assert isinstance(child, Tag)
-    assert child.name == "Child Tag"
-    assert child.matching_algorithm == MatchingAlgorithm.ANY
-    assert isinstance(child.children, list)
-    assert isinstance(child.children[0], Tag)
-    assert child.children[0].name == "Grandchild Tag"
-    assert child.children[0].matching_algorithm == MatchingAlgorithm.AUTO
-
-
 def test_draft_value_raises_for_wrong_expected_type(api: PaperlessClient) -> None:
-    """draft_value() must raise TypeError when result type mismatches expected_type (L245-246)."""
+    """draft_value() must raise TypeError when the result type mismatches expected_type."""
     # Build a CustomField with no cache so draft_value returns a plain CustomFieldValue.
     cf = CustomField.from_data(api._runtime, {"id": 99, "name": "test", "data_type": "integer"})
     # Without cache the result is CustomFieldValue, not CustomFieldBooleanValue.
@@ -279,4 +229,6 @@ def test_draft_value_raises_for_wrong_expected_type(api: PaperlessClient) -> Non
 
     # Passing expected_type=None must not raise (the guard is skipped).
     result = cf.draft_value(42)
-    assert result is not None
+    assert type(result) is CustomFieldValue
+    assert result.field == 99
+    assert result.value == 42
