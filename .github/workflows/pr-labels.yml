@@ -10,23 +10,33 @@ on:
       - unlabeled
   workflow_call:
 
+permissions: {}
+
 jobs:
   pr_labels:
     name: Verify
     runs-on: ubuntu-latest
     steps:
       - name: 🏷 Verify PR has a valid label
-        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
-        with:
-          pull-request-number: "${{ github.event.pull_request.number }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          valid-labels: >-
-            breaking-change, bugfix,
-            ci,
-            dependencies, documentation,
-            enhancement,
-            maintenance,
-            new-feature,
-            performance,
-            refactor
-          disable-reviews: true
+        env:
+          # The labels ship with the event payload, so no API call is needed
+          PR_LABELS: "${{ toJSON(github.event.pull_request.labels.*.name) }}"
+          VALID_LABELS: >-
+            breaking-change bugfix ci dependencies documentation
+            enhancement maintenance new-feature performance refactor
+        run: |
+          matched=""
+          while IFS= read -r label; do
+            for valid in $VALID_LABELS; do
+              if [ "$label" = "$valid" ]; then
+                matched="${matched:+$matched, }$label"
+              fi
+            done
+          done < <(jq -r '.[]' <<< "$PR_LABELS")
+
+          if [ -z "$matched" ]; then
+            echo "::error title=Missing label::This PR needs at least one of these labels: ${VALID_LABELS}"
+            exit 1
+          fi
+
+          echo "Found valid label(s): ${matched}"
