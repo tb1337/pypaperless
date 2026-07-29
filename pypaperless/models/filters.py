@@ -64,8 +64,8 @@ class _ExpirationFilters(TypedDict, total=False):
     expiration__year: int
 
 
-class _NameFilters(_IdFilters, total=False):
-    """Common name filter fields for classifier resources."""
+class _NameFilters(TypedDict, total=False):
+    """Common name filter fields for named resources."""
 
     name__icontains: str
     name__iendswith: str
@@ -73,16 +73,24 @@ class _NameFilters(_IdFilters, total=False):
     name__istartswith: str
 
 
-class CorrespondentFilters(_NameFilters, total=False):
+class _NameIdFilters(_IdFilters, _NameFilters, total=False):
+    """Common name and id filter fields for classifier resources.
+
+    ``/api/groups/`` is name-filterable but exposes no ``id`` filters, so it
+    inherits :class:`_NameFilters` directly instead.
+    """
+
+
+class CorrespondentFilters(_NameIdFilters, total=False):
     """Filters for :attr:`Paperless.correspondents`."""
 
 
-class CustomFieldFilters(_NameFilters, total=False):
+class CustomFieldFilters(_NameIdFilters, total=False):
     """Filters for :attr:`Paperless.custom_fields`."""
 
 
 class DocumentFilters(_IdFilters, _CreatedFilters, total=False):
-    """Filters for :attr:`Paperless.documents` and :attr:`Paperless.trash`.
+    """Filters for :attr:`Paperless.documents`.
 
     These map 1-to-1 to the ``DocumentFilterSet`` in paperless-ngx.
     """
@@ -185,12 +193,19 @@ class DocumentFilters(_IdFilters, _CreatedFilters, total=False):
     title_search: str
 
 
-class DocumentTypeFilters(_NameFilters, total=False):
+class DocumentTypeFilters(_NameIdFilters, total=False):
     """Filters for :attr:`Paperless.document_types`."""
 
 
 class GroupFilters(_NameFilters, total=False):
     """Filters for :attr:`Paperless.groups`."""
+
+
+class ProcessedMailFilters(TypedDict, total=False):
+    """Filters for :attr:`Paperless.processed_mail`."""
+
+    rule: int  # must be an existing mail rule pk, the API rejects unknown ones with 400
+    status: str  # free CharField upstream, values are upper-case: "SUCCESS", "FAILED", …
 
 
 class ShareLinkFilters(_CreatedFilters, _ExpirationFilters, total=False):
@@ -204,7 +219,7 @@ class ShareLinkBundleFilters(_CreatedFilters, _ExpirationFilters, total=False):
     status: ShareLinkBundleStatus | str
 
 
-class StoragePathFilters(_NameFilters, total=False):
+class StoragePathFilters(_NameIdFilters, total=False):
     """Filters for :attr:`Paperless.storage_paths`."""
 
     path__icontains: str
@@ -213,7 +228,7 @@ class StoragePathFilters(_NameFilters, total=False):
     path__istartswith: str
 
 
-class TagFilters(_NameFilters, total=False):
+class TagFilters(_NameIdFilters, total=False):
     """Filters for :attr:`Paperless.tags`."""
 
     is_root: bool
@@ -226,8 +241,9 @@ class TaskFilters(TypedDict, total=False):
     date_created_after: str
     date_created_before: str
     is_complete: bool
-    ordering: str
+    name: str  # free-text over input filename, task type and trigger source labels
     owner: int
+    result: str  # free-text over result reason, error message and document id
     status: TaskStatus | str | list[TaskStatus | str]
     task_id: str
     task_type: TaskType | str | list[TaskType | str]

@@ -562,6 +562,23 @@ async def test_filter_contexts_isolated_across_tasks(
     assert sent == {"acme", "globex"}
 
 
+async def test_processed_mail_filter(httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+    """ProcessedMailService.filter() forwards its typed keys into the query string."""
+    httpx_mock.add_response(
+        method="GET",
+        url=re.compile(r"^" f"{PAPERLESS_TEST_URL}{EndpointPath.PROCESSED_MAIL}" r"\?.*$"),
+        status_code=200,
+        json=PROCESSED_MAIL_MAP.data,
+    )
+    async with paperless.processed_mail.filter(rule=1, status="FAILED") as filtered:
+        items = await filtered.as_list()
+
+    assert len(items) == len(PROCESSED_MAIL_MAP.data["results"])
+    params = httpx_mock.get_requests()[-1].url.params
+    assert params["rule"] == "1"
+    assert params["status"] == "FAILED"
+
+
 def test_tag_with_nested_children(api: PaperlessClient) -> None:
     """Tag._validate_children builds nested Tag instances from raw dict children."""
     tag_data = {

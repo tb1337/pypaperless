@@ -16,12 +16,12 @@ from .data import (
     DATA_DOCUMENT_TYPES,
     DATA_DOCUMENTS,
     DATA_GROUPS,
+    DATA_PROCESSED_MAIL,
     DATA_SHARE_LINK_BUNDLES,
     DATA_SHARE_LINKS,
     DATA_STORAGE_PATHS,
     DATA_TAGS,
     DATA_TASKS,
-    DATA_TRASH,
     DATA_USERS,
 )
 
@@ -47,7 +47,6 @@ def _expected_param(value: Any) -> str:
         ("correspondents", "correspondents", {"name__icontains": "acme"}, DATA_CORRESPONDENTS),
         ("tags", "tags", {"is_root": True}, DATA_TAGS),
         ("storage_paths", "storage_paths", {"path__icontains": "/invoices"}, DATA_STORAGE_PATHS),
-        ("trash", "trash", {"title__icontains": "old"}, DATA_TRASH),
         ("groups", "groups", {"name__icontains": "admin"}, DATA_GROUPS),
         ("users", "users", {"username__icontains": "admin"}, DATA_USERS),
         (
@@ -77,8 +76,14 @@ def _expected_param(value: Any) -> str:
         (
             "tasks",
             "tasks",
-            {"status": "pending"},
+            {"status": "pending", "name": "consume", "result": "timeout"},
             DATA_TASKS,
+        ),
+        (
+            "processed_mail",
+            "processed_mail",
+            {"rule": 1, "status": "FAILED"},
+            DATA_PROCESSED_MAIL,
         ),
     ],
     ids=[
@@ -86,7 +91,6 @@ def _expected_param(value: Any) -> str:
         "correspondents",
         "tags",
         "storage_paths",
-        "trash",
         "groups",
         "users",
         "share_link_bundles",
@@ -94,6 +98,7 @@ def _expected_param(value: Any) -> str:
         "document_types",
         "share_links",
         "tasks",
+        "processed_mail",
     ],
 )
 async def test_service_filter_forwards_typed_kwargs(

@@ -1567,6 +1567,28 @@ async def test_filter_context(p: PaperlessClient) -> None:
     except Exception as exc:
         fail("tags.filter()", exc)
 
+    try:
+        async with p.processed_mail.filter(status="SUCCESS"):
+            count = 0
+            async for _ in p.processed_mail:
+                count += 1
+                if count >= PAGE_SIZE:
+                    break
+        ok("processed_mail.filter(status='SUCCESS')", f"iterated={count}")
+    except Exception as exc:
+        fail("processed_mail.filter()", exc)
+
+    try:
+        async with p.tasks.filter(name="consume"):
+            count = 0
+            async for _ in p.tasks:
+                count += 1
+                if count >= PAGE_SIZE:
+                    break
+        ok("tasks.filter(name='consume')", f"iterated={count}")
+    except Exception as exc:
+        fail("tasks.filter()", exc)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 async def test_profile(p: PaperlessClient) -> None:

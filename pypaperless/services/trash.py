@@ -1,12 +1,7 @@
 """Provide `Trash` related services."""
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from typing import Self, Unpack
-
 from pypaperless.const import EndpointPath, PaperlessResource
 from pypaperless.models.documents import Document
-from pypaperless.models.filters import DocumentFilters
 
 from . import mixins
 from .base import ResourceService
@@ -16,28 +11,16 @@ class TrashService(
     ResourceService,
     mixins.IterableService[Document],
 ):
-    """Represent a factory for Paperless trashed `Document` models."""
+    """Represent a factory for Paperless trashed `Document` models.
+
+    ``/api/trash/`` declares no query filters and silently ignores the document
+    ones, so :meth:`filter` supports pagination only.
+    """
 
     _api_path = EndpointPath.TRASH
     _resource = PaperlessResource.TRASH
 
     _resource_cls = Document
-
-    @asynccontextmanager
-    async def filter(self, **kwargs: Unpack[DocumentFilters]) -> AsyncGenerator[Self]:
-        """Iterate trashed documents with server-side filters.
-
-        See :class:`~pypaperless.models.filters.DocumentFilters` for all available keys.
-
-        Example::
-
-            async with paperless.trash.filter(title__icontains="old") as filtered:
-                async for doc in filtered:
-                    print(doc.title)
-
-        """
-        async with self._store_filters(**kwargs) as ctx:
-            yield ctx
 
     async def restore(self, documents: list[int]) -> None:
         """Restore the given documents from the trash.
