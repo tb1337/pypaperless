@@ -3,12 +3,18 @@ name: PR Labels
 
 # yamllint disable-line rule:truthy
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - labeled
       - unlabeled
   workflow_call:
+
+# GitHub emits one `labeled` event per label, so a bot applying five labels
+# queues five runs within a second. Only the latest label state matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions: {}
 
