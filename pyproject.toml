@@ -43,7 +43,7 @@ dev = [
     "yamllint>=1.38.0",
 ]
 docs = [
-    "zensical>=0.0.51",
+    "zensical>=0.0.52",
 ]
 
 [project.urls]
