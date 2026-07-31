@@ -39,7 +39,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest-httpx>=0.36.2",
-    "ruff>=0.16.0",
+    "ruff>=0.16.1",
     "yamllint>=1.38.0",
 ]
 docs = [
