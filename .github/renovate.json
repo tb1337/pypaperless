@@ -57,6 +57,7 @@
         "dev"
       ],
       "addLabels": [
+        "dependencies",
         "dev-deps",
         "python"
       ],
@@ -98,6 +99,7 @@
         "dockerfile"
       ],
       "addLabels": [
+        "dependencies",
         "docker",
         "skip-changelog"
       ],

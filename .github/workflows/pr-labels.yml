@@ -6,17 +6,22 @@ on:
   pull_request:
     types:
       - opened
+      - reopened
+      - synchronize
       - labeled
       - unlabeled
   workflow_call:
 
 # GitHub emits one `labeled` event per label, so a bot applying five labels
-# queues five runs within a second. Only the latest label state matters.
+# queues five runs within a second. They are serialised rather than cancelled:
+# Renovate reads every check run on the head commit and maps `cancelled` to
+# neither pass nor fail, which parks the branch in a pending state forever.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
-permissions: {}
+permissions:
+  pull-requests: read
 
 jobs:
   pr_labels:
@@ -25,20 +30,28 @@ jobs:
     steps:
       - name: 🏷 Verify PR has a valid label
         env:
-          # The labels ship with the event payload, so no API call is needed
-          PR_LABELS: "${{ toJSON(github.event.pull_request.labels.*.name) }}"
+          GH_TOKEN: ${{ github.token }}
+          PR_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           VALID_LABELS: >-
             breaking-change bugfix ci dependencies documentation
             enhancement maintenance new-feature performance refactor
         run: |
+          # Renovate opens the PR first and applies its labels in a second API
+          # call, so the event payload can carry a label set that is already
+          # stale by the time this runs. A failure here sticks to the commit
+          # for good, so read the live state instead.
+          labels="$(gh api "repos/${PR_REPO}/pulls/${PR_NUMBER}" --jq '.labels[].name')"
+
           matched=""
           while IFS= read -r label; do
+            [ -n "$label" ] || continue
             for valid in $VALID_LABELS; do
               if [ "$label" = "$valid" ]; then
                 matched="${matched:+$matched, }$label"
               fi
             done
-          done < <(jq -r '.[]' <<< "$PR_LABELS")
+          done <<< "$labels"
 
           if [ -z "$matched" ]; then
             echo "::error title=Missing label::This PR needs at least one of these labels: ${VALID_LABELS}"
