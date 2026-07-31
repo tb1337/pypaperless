@@ -33,25 +33,41 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          MAX_ATTEMPTS: "8"
+          RETRY_DELAY: "5"
           VALID_LABELS: >-
             breaking-change bugfix ci dependencies documentation
             enhancement maintenance new-feature performance refactor
         run: |
-          # Renovate opens the PR first and applies its labels in a second API
-          # call, so the event payload can carry a label set that is already
-          # stale by the time this runs. A failure here sticks to the commit
-          # for good, so read the live state instead.
-          labels="$(gh api "repos/${PR_REPO}/pulls/${PR_NUMBER}" --jq '.labels[].name')"
-
+          # A bot opens the PR first and applies its labels in a second API
+          # call, so both the event payload and an immediate read can see an
+          # empty set — this job has finished within 7s of a PR being opened.
+          # A failure sticks to the commit for good, so poll for the labels to
+          # land before calling a PR unlabelled.
           matched=""
-          while IFS= read -r label; do
-            [ -n "$label" ] || continue
-            for valid in $VALID_LABELS; do
-              if [ "$label" = "$valid" ]; then
-                matched="${matched:+$matched, }$label"
-              fi
-            done
-          done <<< "$labels"
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            if ! labels="$(gh api "repos/${PR_REPO}/pulls/${PR_NUMBER}" --jq '.labels[].name')"; then
+              labels=""
+            fi
+
+            while IFS= read -r label; do
+              [ -n "$label" ] || continue
+              for valid in $VALID_LABELS; do
+                if [ "$label" = "$valid" ]; then
+                  matched="${matched:+$matched, }$label"
+                fi
+              done
+            done <<< "$labels"
+
+            if [ -n "$matched" ]; then
+              break
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "No valid label yet (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${RETRY_DELAY}s"
+              sleep "$RETRY_DELAY"
+            fi
+          done
 
           if [ -z "$matched" ]; then
             echo "::error title=Missing label::This PR needs at least one of these labels: ${VALID_LABELS}"
