@@ -588,6 +588,33 @@ await paperless.documents.bulk_edit.edit_pdf(
 )
 ```
 
+`split()` and `delete_pages()` are convenience wrappers around `edit_pdf()` - both take a
+single document, like `edit_pdf()` itself:
+
+```python
+# two new documents: pages 1-2 and page 3
+await paperless.documents.bulk_edit.split(
+    42,
+    [[1, 2], [3]],
+    delete_originals=False,  # move the source document to trash afterwards
+)
+
+# drop pages 2 and 4, creating a new version of document 42
+await paperless.documents.bulk_edit.delete_pages(42, [2, 4])
+```
+
+Two things worth knowing:
+
+- The documents produced by `split()` inherit the source metadata **unchanged** - there is
+  no `(split 1)`, `(split 2)`, … title suffix. Rename the results afterwards if you need it.
+- The API keeps the pages it is handed rather than removing them, so `delete_pages()` needs
+  the total page count and looks it up with one extra request. Pass `page_count=` when you
+  already have the document, when its record carries no page count (not a PDF, or not
+  processed yet), or when `source_mode` selects a file with a different number of pages.
+
+Both raise `ValueError` for input that cannot produce a valid PDF - no page groups, an empty
+group, no pages to remove, page numbers outside the document, or removing every page.
+
 `remove_password()` decrypts password-protected PDFs:
 
 ```python
@@ -600,12 +627,12 @@ await paperless.documents.bulk_edit.remove_password(
 
 ### Choosing the source file
 
-`rotate()`, `merge()`, `edit_pdf()` and `remove_password()` all accept `source_mode`,
-which selects the file the operation reads from - `"latest_version"` (default) or
-`"original"`:
+`rotate()`, `merge()`, `edit_pdf()`, `split()`, `delete_pages()` and `remove_password()` all
+accept `source_mode`, which selects the file the operation reads from - `"latest_version"`
+(default) or `"explicit_selection"`:
 
 ```python
-await paperless.documents.bulk_edit.rotate([1, 2], 90, source_mode="original")
+await paperless.documents.bulk_edit.rotate([1, 2], 90, source_mode="explicit_selection")
 ```
 
 All bulk edit operations raise `BulkEditError` (a `ResponseError` subclass) when the API returns a non-OK result.

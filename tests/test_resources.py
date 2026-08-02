@@ -41,6 +41,7 @@ from .data import (
     DATA_PROFILE,
     DATA_REMOTE_VERSION,
     DATA_SEARCH,
+    DATA_SEARCH_AUTOCOMPLETE,
     DATA_SHARE_LINK_BUNDLES,
     DATA_STATISTICS,
     DATA_STATUS,
@@ -529,13 +530,13 @@ class TestTrash:
 
 
 class TestSearch:
-    """Global search service: query and db_only flag."""
+    """Global search service: query, db_only flag and autocomplete."""
 
     async def test_call(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
         """search('query') returns a SearchResult with documents."""
         httpx_mock.add_response(
             method="GET",
-            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r".*$"),
+            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r"\?.*$"),
             status_code=200,
             json=DATA_SEARCH,
         )
@@ -555,7 +556,7 @@ class TestSearch:
         """search('query', db_only=True) passes db_only param and returns SearchResult."""
         httpx_mock.add_response(
             method="GET",
-            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r".*db_only.*$"),
+            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r"\?.*db_only.*$"),
             status_code=200,
             json=DATA_SEARCH,
         )
@@ -573,7 +574,7 @@ class TestSearch:
         """search(SearchQuery(...)) converts the builder to a string automatically."""
         httpx_mock.add_response(
             method="GET",
-            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r".*$"),
+            url=re.compile(r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH}" + r"\?.*$"),
             status_code=200,
             json=DATA_SEARCH,
         )
@@ -583,6 +584,42 @@ class TestSearch:
         assert result.total == DATA_SEARCH["total"]
 
         assert httpx_mock.get_requests()[-1].url.params["query"] == str(q)
+
+    async def test_autocomplete(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """autocomplete() returns the bare term list and omits limit when unset."""
+        httpx_mock.add_response(
+            method="GET",
+            url=re.compile(
+                r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH_AUTOCOMPLETE}" + r"\?.*$"
+            ),
+            status_code=200,
+            json=DATA_SEARCH_AUTOCOMPLETE,
+        )
+        result = await paperless.search.autocomplete("inv")
+        assert result == DATA_SEARCH_AUTOCOMPLETE
+
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["term"] == "inv"
+        assert "limit" not in params
+
+    async def test_autocomplete_with_limit(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """autocomplete(term, limit) forwards the limit query parameter."""
+        httpx_mock.add_response(
+            method="GET",
+            url=re.compile(
+                r"^" + f"{PAPERLESS_TEST_URL}{EndpointPath.SEARCH_AUTOCOMPLETE}" + r"\?.*limit.*$"
+            ),
+            status_code=200,
+            json=DATA_SEARCH_AUTOCOMPLETE[:1],
+        )
+        result = await paperless.search.autocomplete("inv", 1)
+        assert result == DATA_SEARCH_AUTOCOMPLETE[:1]
+
+        params = httpx_mock.get_requests()[-1].url.params
+        assert params["term"] == "inv"
+        assert params["limit"] == "1"
 
 
 class TestBulkEditObjects:
@@ -650,7 +687,7 @@ class TestBulkEditObjects:
 
 
 class TestDocumentsBulkEdit:
-    """DocumentBulkEditService: all 14 bulk operations."""
+    """DocumentBulkEditService: all 16 bulk operations."""
 
     async def test_set_correspondent(
         self, httpx_mock: HTTPXMock, paperless: PaperlessClient
@@ -899,6 +936,96 @@ class TestDocumentsBulkEdit:
         )
         with pytest.raises(BulkEditError):
             await paperless.documents.bulk_edit.modify_tags([1], add_tags=[3], remove_tags=[])
+
+    async def test_split(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """split() translates page groups into edit_pdf doc indices."""
+        httpx_mock.add_response(
+            method="POST",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_EDIT_PDF}",
+            status_code=200,
+            json=DATA_DOCUMENTS_BULK_EDIT,
+        )
+        await paperless.documents.bulk_edit.split(42, [[1, 2], [3]], delete_originals=True)
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body["documents"] == [42]
+        assert body["operations"] == [
+            {"page": 1, "doc": 0},
+            {"page": 2, "doc": 0},
+            {"page": 3, "doc": 1},
+        ]
+        assert body["delete_original"] is True
+        assert body["update_document"] is False
+        assert body["source_mode"] == "latest_version"
+
+    @pytest.mark.parametrize("pages", [[], [[1], []]])
+    async def test_split_rejects_empty_groups(
+        self, paperless: PaperlessClient, pages: list[list[int]]
+    ) -> None:
+        """split() rejects an empty group list and empty groups before any request."""
+        with pytest.raises(ValueError, match="group"):
+            await paperless.documents.bulk_edit.split(42, pages)
+
+    async def test_delete_pages(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
+        """delete_pages() looks up the page count, then keeps the complement."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=42),
+            status_code=200,
+            json={"id": 42, "page_count": 5},
+        )
+        httpx_mock.add_response(
+            method="POST",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_EDIT_PDF}",
+            status_code=200,
+            json=DATA_DOCUMENTS_BULK_EDIT,
+        )
+        await paperless.documents.bulk_edit.delete_pages(42, [2, 4])
+
+        assert httpx_mock.get_requests()[-2].method == "GET"
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body["documents"] == [42]
+        assert body["operations"] == [{"page": 1}, {"page": 3}, {"page": 5}]
+        assert body["update_document"] is True
+        assert body["delete_original"] is False
+
+    async def test_delete_pages_with_page_count(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """delete_pages(page_count=...) skips the document lookup."""
+        httpx_mock.add_response(
+            method="POST",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_EDIT_PDF}",
+            status_code=200,
+            json=DATA_DOCUMENTS_BULK_EDIT,
+        )
+        await paperless.documents.bulk_edit.delete_pages(42, [1], page_count=3)
+
+        # schema probe + the edit_pdf POST — no document round-trip
+        assert len(httpx_mock.get_requests()) == 2
+        body = json.loads(httpx_mock.get_requests()[-1].content)
+        assert body["operations"] == [{"page": 2}, {"page": 3}]
+
+    async def test_delete_pages_without_page_count_raises(
+        self, httpx_mock: HTTPXMock, paperless: PaperlessClient
+    ) -> None:
+        """A document record without page_count cannot be edited without an explicit count."""
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{PAPERLESS_TEST_URL}{EndpointPath.DOCUMENTS_SINGLE}".format(pk=42),
+            status_code=200,
+            json={"id": 42, "page_count": None},
+        )
+        with pytest.raises(ValueError, match="no page count"):
+            await paperless.documents.bulk_edit.delete_pages(42, [1])
+
+    async def test_delete_pages_validates_pages(self, paperless: PaperlessClient) -> None:
+        """delete_pages() rejects empty, out-of-range and all-pages input locally."""
+        with pytest.raises(ValueError, match="at least one page to remove"):
+            await paperless.documents.bulk_edit.delete_pages(42, [], page_count=3)
+        with pytest.raises(ValueError, match="out of range"):
+            await paperless.documents.bulk_edit.delete_pages(42, [0, 4], page_count=3)
+        with pytest.raises(ValueError, match="keep at least one page"):
+            await paperless.documents.bulk_edit.delete_pages(42, [1, 2, 3], page_count=3)
 
 
 class TestShareLinkBundleRebuild:

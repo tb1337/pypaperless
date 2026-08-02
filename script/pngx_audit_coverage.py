@@ -422,6 +422,7 @@ KNOWN_UTILITY_PATHS: set[str] = {
     "/api/profile/generate_auth_token/",
     "/api/profile/social_account_providers/",
     "/api/profile/totp/",
+    "/api/search/autocomplete/",
     "/api/storage_paths/test/",
     "/api/tasks/acknowledge/",
     "/api/tasks/active/",
@@ -435,7 +436,6 @@ KNOWN_UTILITY_PATHS: set[str] = {
 INTENTIONALLY_SKIPPED_PATHS: set[str] = {
     "/api/logs/",  # server log streaming, not a resource
     "/api/logs/{id}/",  # server log streaming, not a resource
-    "/api/search/autocomplete/",  # UI helper, not a library concern
     "/api/ui_settings/",  # paperless-ngx front-end settings, not exposed
 }
 

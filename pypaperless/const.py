@@ -86,6 +86,7 @@ class EndpointPath(StrEnum):
     SAVED_VIEWS_SINGLE = "/api/saved_views/{pk}/"
 
     SEARCH = "/api/search/"
+    SEARCH_AUTOCOMPLETE = "/api/search/autocomplete/"
 
     SHARE_LINKS = "/api/share_links/"
     SHARE_LINKS_SINGLE = "/api/share_links/{pk}/"

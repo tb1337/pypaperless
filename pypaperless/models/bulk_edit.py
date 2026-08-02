@@ -3,7 +3,7 @@
 from typing import Any, Literal, TypedDict
 
 type BulkEditObjectType = Literal["tags", "correspondents", "document_types", "storage_paths"]
-type SourceMode = Literal["latest_version", "original"]
+type SourceMode = Literal["latest_version", "explicit_selection"]
 type CustomFieldsInput = list[int] | dict[int, Any]
 
 
