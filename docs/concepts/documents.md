@@ -611,9 +611,17 @@ Two things worth knowing:
   the total page count and looks it up with one extra request. Pass `page_count=` when you
   already have the document, when its record carries no page count (not a PDF, or not
   processed yet), or when `source_mode` selects a file with a different number of pages.
+- That count comes from an earlier request, so the pages to keep are a snapshot. If the
+  document gains a version in between, the wrong pages survive - a shorter file is rejected
+  by the server as out of bounds, but a longer one silently loses its extra pages. Passing
+  `page_count=` does not close that window; it only skips the lookup, moving the staleness to
+  your own read. The native, now-deprecated `delete_pages` bulk method avoided this by
+  removing pages by index server-side.
 
-Both raise `ValueError` for input that cannot produce a valid PDF - no page groups, an empty
-group, no pages to remove, page numbers outside the document, or removing every page.
+Both raise `BulkEditPagesError` for input that cannot produce a valid PDF - no page groups, an
+empty group, no pages to remove, page numbers outside the document, or removing every page.
+It subclasses both `DocumentError` and `ValueError`, and the checks run before any request is
+sent. See [Exceptions](../exceptions.md#bulkeditpageserror).
 
 `remove_password()` decrypts password-protected PDFs:
 

@@ -9,7 +9,13 @@ from pytest_httpx import HTTPXMock
 from pypaperless import PaperlessClient
 from pypaperless.builders import SearchQuery
 from pypaperless.const import EndpointPath
-from pypaperless.exceptions import BulkEditError, NotFoundError, TaskNotFoundError
+from pypaperless.exceptions import (
+    BulkEditError,
+    BulkEditPagesError,
+    NotFoundError,
+    PaperlessError,
+    TaskNotFoundError,
+)
 from pypaperless.models import (
     Config,
     Document,
@@ -962,7 +968,7 @@ class TestDocumentsBulkEdit:
         self, paperless: PaperlessClient, pages: list[list[int]]
     ) -> None:
         """split() rejects an empty group list and empty groups before any request."""
-        with pytest.raises(ValueError, match="group"):
+        with pytest.raises(BulkEditPagesError, match="group"):
             await paperless.documents.bulk_edit.split(42, pages)
 
     async def test_delete_pages(self, httpx_mock: HTTPXMock, paperless: PaperlessClient) -> None:
@@ -1015,17 +1021,22 @@ class TestDocumentsBulkEdit:
             status_code=200,
             json={"id": 42, "page_count": None},
         )
-        with pytest.raises(ValueError, match="no page count"):
+        with pytest.raises(BulkEditPagesError, match="no page count"):
             await paperless.documents.bulk_edit.delete_pages(42, [1])
 
     async def test_delete_pages_validates_pages(self, paperless: PaperlessClient) -> None:
         """delete_pages() rejects empty, out-of-range and all-pages input locally."""
-        with pytest.raises(ValueError, match="at least one page to remove"):
+        with pytest.raises(BulkEditPagesError, match="at least one page to remove"):
             await paperless.documents.bulk_edit.delete_pages(42, [], page_count=3)
-        with pytest.raises(ValueError, match="out of range"):
+        with pytest.raises(BulkEditPagesError, match="out of range"):
             await paperless.documents.bulk_edit.delete_pages(42, [0, 4], page_count=3)
-        with pytest.raises(ValueError, match="keep at least one page"):
+        with pytest.raises(BulkEditPagesError, match="keep at least one page"):
             await paperless.documents.bulk_edit.delete_pages(42, [1, 2, 3], page_count=3)
+
+    def test_bulk_edit_pages_error_bases(self) -> None:
+        """Both bases are load-bearing: `except PaperlessError` and `except ValueError` catch it."""
+        assert issubclass(BulkEditPagesError, PaperlessError)
+        assert issubclass(BulkEditPagesError, ValueError)
 
 
 class TestShareLinkBundleRebuild:

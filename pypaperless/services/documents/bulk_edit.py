@@ -1,7 +1,7 @@
 """Provide `DocumentBulkEdit` service."""
 
 from pypaperless.const import EndpointPath
-from pypaperless.exceptions import BulkEditError
+from pypaperless.exceptions import BulkEditError, BulkEditPagesError
 from pypaperless.models.bulk_edit import CustomFieldsInput, EditPdfOperation, SourceMode
 from pypaperless.models.mixins.securable import Permissions
 from pypaperless.services.base import PaperlessService
@@ -27,7 +27,7 @@ class DocumentBulkEditService(PaperlessService):
                 f"Document {document} reports no page count (not a PDF, or not processed yet) "
                 "— pass page_count explicitly."
             )
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
         return page_count
 
     async def set_correspondent(
@@ -422,6 +422,9 @@ class DocumentBulkEditService(PaperlessService):
             source_mode:      Whether to operate on ``"latest_version"`` or
                               ``"explicit_selection"``.
 
+        Raises:
+            BulkEditPagesError: When *pages* is empty or contains an empty group.
+
         Example::
 
             await paperless.documents.bulk_edit.split(42, [[1, 2], [3]])
@@ -429,10 +432,10 @@ class DocumentBulkEditService(PaperlessService):
         """
         if not pages:
             msg = "split() requires at least one page group."
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
         if any(not group for group in pages):
             msg = "split() page groups must not be empty."
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
 
         operations: list[EditPdfOperation] = [
             {"page": page, "doc": index} for index, group in enumerate(pages) for page in group
@@ -458,6 +461,13 @@ class DocumentBulkEditService(PaperlessService):
         the pages it is handed — so the complement of *pages* is computed here,
         which needs the total page count.
 
+        Because that count comes from an earlier request, the pages to keep are
+        a snapshot: if the document gains a version between the lookup and the
+        edit, the wrong pages survive.  A shorter file is rejected by the server
+        as out of bounds, but a longer one silently loses its extra pages.
+        Passing *page_count* does not close that window — it only skips the
+        lookup, moving the staleness to the caller's own read.
+
         Args:
             document:    Primary key of the document to edit.
             pages:       1-based page numbers to remove.
@@ -469,6 +479,10 @@ class DocumentBulkEditService(PaperlessService):
             source_mode: Whether to operate on ``"latest_version"`` or
                          ``"explicit_selection"``.
 
+        Raises:
+            BulkEditPagesError: When *pages* is empty, falls outside the
+                document, or would remove every page.
+
         Example::
 
             await paperless.documents.bulk_edit.delete_pages(42, [2, 4])
@@ -476,19 +490,19 @@ class DocumentBulkEditService(PaperlessService):
         """
         if not pages:
             msg = "delete_pages() requires at least one page to remove."
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
         if page_count is None:
             page_count = await self._page_count(document)
 
         out_of_range = sorted({page for page in pages if not 1 <= page <= page_count})
         if out_of_range:
             msg = f"Pages {out_of_range} are out of range for a {page_count} page document."
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
 
         remaining = sorted(set(range(1, page_count + 1)) - set(pages))
         if not remaining:
             msg = "delete_pages() must keep at least one page."
-            raise ValueError(msg)
+            raise BulkEditPagesError(msg)
 
         operations: list[EditPdfOperation] = [{"page": page} for page in remaining]
         await self.edit_pdf(

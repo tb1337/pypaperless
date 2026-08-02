@@ -34,6 +34,7 @@ PaperlessError
 │   └── TaskNotFoundError
 └── DocumentError
     ├── AsnRequestError
+    ├── BulkEditPagesError
     └── SendEmailError
 ```
 
@@ -241,6 +242,12 @@ Base class for exceptions raised by document-specific service operations. Catch 
 #### `AsnRequestError`
 
 Raised when the request for the next available archive serial number fails unexpectedly.
+
+#### `BulkEditPagesError`
+
+Raised by `documents.bulk_edit.split()` and `.delete_pages()` when the page selection cannot produce a valid PDF: no page groups, an empty group, no pages to remove, page numbers outside the document, or removing every page. Also raised when the page count has to be looked up and the document record carries none - not a PDF, or not processed yet.
+
+This one has two bases - `DocumentError` **and** `ValueError` - so both `except PaperlessError` and `except ValueError` catch it. The checks run before any request is sent.
 
 #### `SendEmailError`
 
