@@ -182,3 +182,11 @@ class AsnRequestError(DocumentError):
 
 class SendEmailError(DocumentError):
     """Raised when sending email for a document fails."""
+
+
+class BulkEditPagesError(DocumentError, ValueError):
+    """Raised when a page selection for a PDF page operation cannot be applied.
+
+    Also a :class:`ValueError`, so callers may catch either that or
+    :class:`PaperlessError`.
+    """

@@ -1,6 +1,6 @@
 # Search
 
-The `search` resource exposes the Paperless-ngx global search endpoint (`/api/search/`). It searches across documents, tags, correspondents, document types, and other resource types simultaneously and returns a scored, ranked result.
+The `search` resource exposes the Paperless-ngx global search endpoint (`/api/search/`). It searches across documents, tags, correspondents, document types, and other resource types simultaneously and returns a scored, ranked result. It also exposes the typeahead endpoint (`/api/search/autocomplete/`) via [`autocomplete()`](#autocomplete).
 
 ## Model
 
@@ -56,6 +56,19 @@ Pass `db_only=True` to skip the full-text index and search only the database fie
 ```python
 result = await paperless.search("contract", db_only=True)
 ```
+
+### Autocomplete
+
+`autocomplete()` hits `/api/search/autocomplete/` and returns a plain list of index terms - the typeahead helper behind the Paperless-ngx search bar, not resource objects:
+
+```python
+terms = await paperless.search.autocomplete("inv")
+# ['invoice', 'invoices', 'invoiced']
+
+terms = await paperless.search.autocomplete("inv", 3)
+```
+
+`limit` is omitted from the request when left at `None`, which leaves the server default (10) in place. An empty term or a `limit` below 1 is rejected by the server with HTTP 400, raising `UnexpectedStatusError`.
 
 ### Working with results
 

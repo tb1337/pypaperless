@@ -36,7 +36,8 @@ Every Paperless-ngx entity is exposed through a **service** on the `PaperlessCli
     `bulk_edit_objects` exposes bulk `set_permissions` and `delete` for tags,
     correspondents, document types and storage paths. `documents.bulk_edit` exposes
     bulk operations (set metadata, tags, custom fields, permissions, delete, reprocess,
-    rotate, merge, edit PDF pages, remove PDF passwords) for documents. Neither service
+    rotate, merge, edit PDF pages, split, delete pages, remove PDF passwords) for
+    documents. Neither service
     follows the standard CRUD pattern above.
     See [Bulk Edit Objects](resources/bulk_edit_objects.md) and the
     [Documents concept page](concepts/documents.md#bulk-editing) for details.

@@ -28,6 +28,7 @@ from .profile import DATA_PROFILE
 from .remote_version import DATA_REMOTE_VERSION
 from .saved_views import DATA_SAVED_VIEWS
 from .search import DATA_SEARCH
+from .search_autocomplete import DATA_SEARCH_AUTOCOMPLETE
 from .share_link_bundles import DATA_SHARE_LINK_BUNDLES
 from .share_links import DATA_SHARE_LINKS
 from .statistics import DATA_STATISTICS
@@ -84,6 +85,7 @@ __all__ = (
     "DATA_SAVED_VIEWS",
     "DATA_SCHEMA",
     "DATA_SEARCH",
+    "DATA_SEARCH_AUTOCOMPLETE",
     "DATA_SHARE_LINKS",
     "DATA_SHARE_LINK_BUNDLES",
     "DATA_STATISTICS",

@@ -247,6 +247,12 @@ async def test_search(p: PaperlessClient) -> None:
         detail_fn=lambda r: f"total={r.total}, query={str(q)!r}",
     )
 
+    await check(
+        "search.autocomplete('inv')",
+        p.search.autocomplete("inv", 5),
+        detail_fn=lambda r: f"terms={r}",
+    )
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 async def test_config(p: PaperlessClient) -> None:

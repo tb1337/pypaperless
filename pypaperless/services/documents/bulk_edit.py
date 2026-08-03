@@ -1,7 +1,7 @@
 """Provide `DocumentBulkEdit` service."""
 
 from pypaperless.const import EndpointPath
-from pypaperless.exceptions import BulkEditError
+from pypaperless.exceptions import BulkEditError, BulkEditPagesError
 from pypaperless.models.bulk_edit import CustomFieldsInput, EditPdfOperation, SourceMode
 from pypaperless.models.mixins.securable import Permissions
 from pypaperless.services.base import PaperlessService
@@ -17,6 +17,18 @@ class DocumentBulkEditService(PaperlessService):
         data = await self._runtime.transport.post(path, json=json)
         if data.get("result") != "OK":
             raise BulkEditError(str(data.get("result")))
+
+    async def _page_count(self, document: int) -> int:
+        """Read `page_count` off the document record; the kept-pages complement needs it."""
+        data = await self._runtime.transport.get(EndpointPath.DOCUMENTS_SINGLE.format(pk=document))
+        page_count: int | None = data.get("page_count")
+        if page_count is None:
+            msg = (
+                f"Document {document} reports no page count (not a PDF, or not processed yet) "
+                "— pass page_count explicitly."
+            )
+            raise BulkEditPagesError(msg)
+        return page_count
 
     async def set_correspondent(
         self,
@@ -281,7 +293,8 @@ class DocumentBulkEditService(PaperlessService):
         Args:
             documents:   List of document primary keys to rotate.
             degrees:     Rotation angle in degrees (e.g. ``90``, ``180``, ``270``).
-            source_mode: Whether to operate on ``"latest_version"`` or ``"original"``.
+            source_mode: Whether to operate on ``"latest_version"`` or
+                         ``"explicit_selection"``.
 
         Example::
 
@@ -316,7 +329,7 @@ class DocumentBulkEditService(PaperlessService):
             archive_fallback:     When ``True``, use the archived version when the
                                   original is unavailable.
             source_mode:          Whether to operate on ``"latest_version"`` or
-                                  ``"original"``.
+                                  ``"explicit_selection"``.
 
         Example::
 
@@ -363,7 +376,7 @@ class DocumentBulkEditService(PaperlessService):
             include_metadata: When ``True``, metadata is carried over to the
                               resulting document.
             source_mode:      Whether to operate on ``"latest_version"`` or
-                              ``"original"``.
+                              ``"explicit_selection"``.
 
         Example::
 
@@ -383,6 +396,121 @@ class DocumentBulkEditService(PaperlessService):
             "source_mode": source_mode,
         }
         await self._post(EndpointPath.DOCUMENTS_EDIT_PDF, json=payload)
+
+    async def split(
+        self,
+        document: int,
+        pages: list[list[int]],
+        *,
+        delete_originals: bool = False,
+        source_mode: SourceMode = "latest_version",
+    ) -> None:
+        """Split a document into several new documents, one per page group.
+
+        Note: the API only supports a **single** document per request.  This is a
+        convenience wrapper around :meth:`edit_pdf`, so the results inherit the
+        source metadata unchanged — there is no ``(split N)`` title suffix.
+
+        Args:
+            document:         Primary key of the document to split.
+            pages:            One list of 1-based page numbers per resulting
+                              document.  ``[[1, 2], [3]]`` yields two documents:
+                              pages 1-2 and page 3.  Pages listed in no group are
+                              dropped; the server validates the page numbers.
+            delete_originals: When ``True``, the source document is moved to
+                              trash once the new documents are consumed.
+            source_mode:      Whether to operate on ``"latest_version"`` or
+                              ``"explicit_selection"``.
+
+        Raises:
+            BulkEditPagesError: When *pages* is empty or contains an empty group.
+
+        Example::
+
+            await paperless.documents.bulk_edit.split(42, [[1, 2], [3]])
+
+        """
+        if not pages:
+            msg = "split() requires at least one page group."
+            raise BulkEditPagesError(msg)
+        if any(not group for group in pages):
+            msg = "split() page groups must not be empty."
+            raise BulkEditPagesError(msg)
+
+        operations: list[EditPdfOperation] = [
+            {"page": page, "doc": index} for index, group in enumerate(pages) for page in group
+        ]
+        await self.edit_pdf(
+            document,
+            operations,
+            delete_original=delete_originals,
+            source_mode=source_mode,
+        )
+
+    async def delete_pages(
+        self,
+        document: int,
+        pages: list[int],
+        *,
+        page_count: int | None = None,
+        source_mode: SourceMode = "latest_version",
+    ) -> None:
+        """Remove pages from a document, creating a new version of it.
+
+        Note: the API has no "remove" operation — :meth:`edit_pdf` keeps exactly
+        the pages it is handed — so the complement of *pages* is computed here,
+        which needs the total page count.
+
+        Because that count comes from an earlier request, the pages to keep are
+        a snapshot: if the document gains a version between the lookup and the
+        edit, the wrong pages survive.  A shorter file is rejected by the server
+        as out of bounds, but a longer one silently loses its extra pages.
+        Passing *page_count* does not close that window — it only skips the
+        lookup, moving the staleness to the caller's own read.
+
+        Args:
+            document:    Primary key of the document to edit.
+            pages:       1-based page numbers to remove.
+            page_count:  Total pages of the source file.  Looked up from the
+                         document record when ``None``.  Pass it to save that
+                         request, for documents whose record carries no page
+                         count, or when ``source_mode`` selects a file with a
+                         different number of pages than the document record.
+            source_mode: Whether to operate on ``"latest_version"`` or
+                         ``"explicit_selection"``.
+
+        Raises:
+            BulkEditPagesError: When *pages* is empty, falls outside the
+                document, or would remove every page.
+
+        Example::
+
+            await paperless.documents.bulk_edit.delete_pages(42, [2, 4])
+
+        """
+        if not pages:
+            msg = "delete_pages() requires at least one page to remove."
+            raise BulkEditPagesError(msg)
+        if page_count is None:
+            page_count = await self._page_count(document)
+
+        out_of_range = sorted({page for page in pages if not 1 <= page <= page_count})
+        if out_of_range:
+            msg = f"Pages {out_of_range} are out of range for a {page_count} page document."
+            raise BulkEditPagesError(msg)
+
+        remaining = sorted(set(range(1, page_count + 1)) - set(pages))
+        if not remaining:
+            msg = "delete_pages() must keep at least one page."
+            raise BulkEditPagesError(msg)
+
+        operations: list[EditPdfOperation] = [{"page": page} for page in remaining]
+        await self.edit_pdf(
+            document,
+            operations,
+            update_document=True,
+            source_mode=source_mode,
+        )
 
     async def remove_password(
         self,
@@ -404,7 +532,7 @@ class DocumentBulkEditService(PaperlessService):
                               trash after decryption.
             include_metadata: When ``True``, metadata is carried over.
             source_mode:      Whether to operate on ``"latest_version"`` or
-                              ``"original"``.
+                              ``"explicit_selection"``.
 
         Example::
 

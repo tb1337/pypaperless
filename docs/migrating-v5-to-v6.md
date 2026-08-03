@@ -662,6 +662,8 @@ await paperless.documents.bulk_edit.merge(
 
 # PDF page operations and password removal
 await paperless.documents.bulk_edit.edit_pdf(42, [{"page": 1, "rotate": 90}])
+await paperless.documents.bulk_edit.split(42, [[1, 2], [3]])
+await paperless.documents.bulk_edit.delete_pages(42, [2, 4])
 await paperless.documents.bulk_edit.remove_password([5, 6], password="secret")
 ```
 
