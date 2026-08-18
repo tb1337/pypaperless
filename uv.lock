@@ -705,7 +705,7 @@ dev = [
     { name = "covdefaults", specifier = ">=2.3.0" },
     { name = "coverage", specifier = ">=7.15.4" },
     { name = "mypy", specifier = ">=2.3.1" },
-    { name = "prek", specifier = ">=0.4.13" },
+    { name = "prek", specifier = ">=0.4.14" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
