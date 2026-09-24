@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from pytest_httpx import HTTPXMock
 
 from pypaperless import PaperlessClient, PaperlessSettings, generate_api_token
-from pypaperless.const import API_VERSION, EndpointPath
+from pypaperless.const import API_VERSION, DEFAULT_TIMEOUT, EndpointPath
 from pypaperless.exceptions import (
     BadJsonResponseError,
     DeletionError,
@@ -672,6 +672,71 @@ def test_settings_token_is_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     cfg_anon = PaperlessSettings(url=PAPERLESS_TEST_URL)
     api_anon = PaperlessClient.from_config(cfg_anon)
     assert api_anon._runtime.transport._token is None
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        (None, httpx.Timeout(DEFAULT_TIMEOUT)),
+        (60, httpx.Timeout(60)),
+        (httpx.Timeout(300.0, connect=10.0), httpx.Timeout(300.0, connect=10.0)),
+    ],
+    ids=["default", "seconds", "httpx_timeout"],
+)
+async def test_client_timeout(
+    httpx_mock: HTTPXMock, given: float | httpx.Timeout | None, expected: httpx.Timeout
+) -> None:
+    """The internally created httpx client applies the default or the given timeout."""
+    httpx_mock.add_response(
+        url=f"{PAPERLESS_TEST_URL}{EndpointPath.INDEX}",
+        method="GET",
+        status_code=200,
+        json=DATA_PATHS,
+    )
+    async with PaperlessClient(PAPERLESS_TEST_URL, PAPERLESS_TEST_TOKEN, timeout=given):
+        pass
+    assert httpx_mock.get_requests()[-1].extensions["timeout"] == expected.as_dict()
+
+
+async def test_generate_api_token_default_timeout(httpx_mock: HTTPXMock) -> None:
+    """generate_api_token() applies the default timeout to its own client."""
+    httpx_mock.add_response(
+        url=f"{PAPERLESS_TEST_URL}{EndpointPath.TOKEN}",
+        method="POST",
+        status_code=200,
+        json=DATA_TOKEN,
+    )
+    await generate_api_token(PAPERLESS_TEST_URL, PAPERLESS_TEST_USER, PAPERLESS_TEST_PASSWORD)
+    expected = httpx.Timeout(DEFAULT_TIMEOUT).as_dict()
+    assert httpx_mock.get_requests()[-1].extensions["timeout"] == expected
+
+
+async def test_timeout_with_custom_client_raises() -> None:
+    """A timeout next to a caller-supplied client is refused instead of silently ignored."""
+    async with httpx.AsyncClient() as external:
+        with pytest.raises(ValueError, match="either client or timeout"):
+            PaperlessClient(PAPERLESS_TEST_URL, PAPERLESS_TEST_TOKEN, client=external, timeout=60)
+        with pytest.raises(ValueError, match="either client or timeout"):
+            PaperlessClient.from_config(
+                PaperlessSettings(url=PAPERLESS_TEST_URL, timeout=60), client=external
+            )
+
+
+def test_settings_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PYPAPERLESS_TIMEOUT reaches the transport; unset falls back to the default."""
+    monkeypatch.setenv("PYPAPERLESS_URL", PAPERLESS_TEST_URL)
+    monkeypatch.setenv("PYPAPERLESS_TIMEOUT", "60")
+    assert PaperlessClient.from_env()._runtime.transport._timeout == 60.0
+
+    monkeypatch.delenv("PYPAPERLESS_TIMEOUT")
+    assert PaperlessClient.from_env()._runtime.transport._timeout == DEFAULT_TIMEOUT
+
+
+@pytest.mark.parametrize("timeout", [0, -1], ids=["zero", "negative"])
+def test_settings_timeout_must_be_positive(timeout: float) -> None:
+    """PaperlessSettings rejects a timeout that would fail every request."""
+    with pytest.raises(ValidationError):
+        PaperlessSettings(url=PAPERLESS_TEST_URL, timeout=timeout)
 
 
 async def test_transport_close_without_prior_request() -> None:

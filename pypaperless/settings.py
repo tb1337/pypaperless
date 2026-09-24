@@ -1,6 +1,6 @@
 """PyPaperless client configuration."""
 
-from pydantic import SecretStr, model_validator
+from pydantic import PositiveFloat, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .const import ENV_PREFIX, ENV_URL
@@ -13,6 +13,7 @@ class PaperlessSettings(BaseSettings):
 
     - ``PYPAPERLESS_URL`` — Paperless-ngx base URL
     - ``PYPAPERLESS_TOKEN`` — API token
+    - ``PYPAPERLESS_TIMEOUT`` — HTTP timeout in seconds (default 300)
 
     The token is held as a :class:`pydantic.SecretStr`, so it never appears
     in ``repr()``, logs, or tracebacks. Use ``token.get_secret_value()`` to
@@ -36,6 +37,7 @@ class PaperlessSettings(BaseSettings):
 
     url: str = ""
     token: SecretStr | None = None
+    timeout: PositiveFloat | None = None
 
     @model_validator(mode="after")
     def _require_url(self) -> "PaperlessSettings":

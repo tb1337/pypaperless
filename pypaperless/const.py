@@ -5,6 +5,9 @@ from typing import Self
 
 API_VERSION = 10
 
+# seconds; httpx's own 5 s default is too short for slow hosts and large downloads
+DEFAULT_TIMEOUT = 300.0
+
 ENV_PREFIX = "PYPAPERLESS_"
 ENV_URL = f"{ENV_PREFIX}URL"
 ENV_TOKEN = f"{ENV_PREFIX}TOKEN"
