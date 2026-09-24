@@ -38,10 +38,11 @@ async with PaperlessClient.from_config(cfg) as paperless:
 
 Set the `PYPAPERLESS_*` environment variables and call `PaperlessClient.from_env()`. Ideal for containers, CI pipelines and twelve-factor apps:
 
-| Environment variable | Field     | Required |
-| -------------------- | --------- | :------: |
-| `PYPAPERLESS_URL`    | Base URL  |    ✓     |
-| `PYPAPERLESS_TOKEN`  | API token |          |
+| Environment variable  | Field                          | Required |
+| --------------------- | ------------------------------ | :------: |
+| `PYPAPERLESS_URL`     | Base URL                       |    ✓     |
+| `PYPAPERLESS_TOKEN`   | API token                      |          |
+| `PYPAPERLESS_TIMEOUT` | [Timeout](#timeout) in seconds |          |
 
 ```bash
 export PYPAPERLESS_URL=https://paperless.example.com
@@ -122,6 +123,32 @@ finally:
 3. Sets `is_initialized = True`.
 
 Any connectivity or authentication problem raises an exception before `is_initialized` becomes `True`. See [Exceptions](exceptions.md) for details.
+
+---
+
+## Timeout
+
+By default, each phase of a request (connect, read, write, pool) may take up to **300 seconds** before `PaperlessTimeoutError` is raised. Pass `timeout` to change it, in seconds or as an `httpx.Timeout` for separate limits per phase:
+
+```python
+import httpx
+from pypaperless import PaperlessClient
+
+async with PaperlessClient("localhost:8000", "your-api-token", timeout=60) as paperless:
+    ...
+
+async with PaperlessClient(
+    "localhost:8000",
+    "your-api-token",
+    timeout=httpx.Timeout(300.0, connect=10.0),
+) as paperless:
+    ...
+```
+
+`PaperlessSettings(timeout=...)` and the `PYPAPERLESS_TIMEOUT` environment variable take seconds. `generate_api_token()` always uses the 300-second default; pass a [custom HTTP client](#custom-http-client) for other values.
+
+!!! note
+    `timeout` only applies to the HTTP client pypaperless creates itself. Combining it with `client` raises a `ValueError` - set the timeout on your custom client instead.
 
 ---
 

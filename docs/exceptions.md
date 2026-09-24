@@ -71,7 +71,7 @@ The host could not be reached (network error, wrong URL, DNS failure, broken con
 
 **Subclasses:**
 
-- **`PaperlessTimeoutError`** - the request timed out. The host is reachable but did not respond in time; retrying, or passing a custom `httpx.AsyncClient` with a higher timeout, may help.
+- **`PaperlessTimeoutError`** - the request timed out. The host is reachable but did not respond in time; retrying, or raising the [timeout](session.md#timeout), may help.
 
 #### `AuthError`
 

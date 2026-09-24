@@ -49,26 +49,31 @@ class PaperlessClient:
         token: str | None = None,
         *,
         client: httpx.AsyncClient | None = None,
+        timeout: float | httpx.Timeout | None = None,
     ) -> None:
         """Initialize a :class:`PaperlessClient` instance.
 
         Args:
-            url:    A hostname, IP-address, or full URL string.
-            token:  An API token from Paperless Django admin or via
-                    :func:`~pypaperless.transport.generate_api_token`.
-            client: A custom :class:`httpx.AsyncClient` to use for requests.
-                    It is never closed by :meth:`close` — its lifecycle
-                    belongs to the caller.
+            url:     A hostname, IP-address, or full URL string.
+            token:   An API token from Paperless Django admin or via
+                     :func:`~pypaperless.transport.generate_api_token`.
+            client:  A custom :class:`httpx.AsyncClient` to use for requests.
+                     It is never closed by :meth:`close` — its lifecycle
+                     belongs to the caller.
+            timeout: Timeout in seconds, or an :class:`httpx.Timeout` for
+                     separate connect/read/write/pool limits.  Defaults to
+                     300 seconds.  Raises :exc:`ValueError` when combined
+                     with ``client`` — set the timeout on that client instead.
 
         Example::
 
-            paperless = PaperlessClient("localhost:8000", "your-token")
+            paperless = PaperlessClient("localhost:8000", "your-token", timeout=60)
             await paperless.initialize()
             doc = await paperless.documents(42)
             await paperless.close()
 
         """
-        transport = PaperlessTransport(url, token, client)
+        transport = PaperlessTransport(url, token, client, timeout)
         cache = PaperlessCache()
 
         self._runtime = PaperlessRuntime(transport, cache)
@@ -92,6 +97,7 @@ class PaperlessClient:
         Args:
             config: A :class:`~pypaperless.settings.PaperlessSettings` instance.
             client: A custom :class:`httpx.AsyncClient` to use for requests.
+                    Raises :exc:`ValueError` when ``config.timeout`` is set.
 
         Example::
 
@@ -104,6 +110,7 @@ class PaperlessClient:
             config.url,
             config.token.get_secret_value() if config.token else None,
             client=client,
+            timeout=config.timeout,
         )
 
     @classmethod
@@ -114,10 +121,12 @@ class PaperlessClient:
     ) -> "PaperlessClient":
         """Create a :class:`PaperlessClient` from environment variables.
 
-        Reads ``PYPAPERLESS_URL`` and ``PYPAPERLESS_TOKEN`` from the environment.
+        Reads ``PYPAPERLESS_URL``, ``PYPAPERLESS_TOKEN`` and
+        ``PYPAPERLESS_TIMEOUT`` from the environment.
 
         Args:
             client: A custom :class:`httpx.AsyncClient` to use for requests.
+                    Raises :exc:`ValueError` when ``PYPAPERLESS_TIMEOUT`` is set.
 
         Example::
 

@@ -5,7 +5,7 @@ from typing import Any, NamedTuple
 
 import httpx
 
-from .const import API_VERSION, EndpointPath
+from .const import API_VERSION, DEFAULT_TIMEOUT, EndpointPath
 from .exceptions import (
     BadJsonResponseError,
     DeletionError,
@@ -39,6 +39,10 @@ class PaperlessTransport:
         base_url: Hostname, IP-address, or full URL string.
         token:    API token, or ``None`` for anonymous access.
         client:   Optional :class:`httpx.AsyncClient` to reuse.
+        timeout:  Timeout in seconds or an :class:`httpx.Timeout` for the
+                  internally created client.  Defaults to
+                  :data:`~pypaperless.const.DEFAULT_TIMEOUT`.  Raises
+                  :exc:`ValueError` when combined with ``client``.
 
     Example::
 
@@ -52,10 +56,15 @@ class PaperlessTransport:
         base_url: str,
         token: str | None,
         client: httpx.AsyncClient | None = None,
+        timeout: float | httpx.Timeout | None = None,
     ) -> None:
         """Initialize a :class:`PaperlessTransport` instance."""
         self._base_url = normalize_base_url(base_url)
         self._token = token
+        if client is not None and timeout is not None:
+            msg = "Pass either client or timeout, not both; set the timeout on the custom client."
+            raise ValueError(msg)
+        self._timeout = DEFAULT_TIMEOUT if timeout is None else timeout
         self._httpx_client = client
         self._owns_client = client is None
 
@@ -107,7 +116,7 @@ class PaperlessTransport:
     ) -> httpx.Response:
         """Send an authenticated HTTP request; handle auth, transport errors, and 401/403."""
         if self._httpx_client is None:
-            self._httpx_client = httpx.AsyncClient()
+            self._httpx_client = httpx.AsyncClient(timeout=self._timeout)
 
         headers: dict[str, str] = {
             "Accept": f"application/json; version={API_VERSION}",
@@ -362,7 +371,8 @@ async def generate_api_token(
         username: Paperless user name.
         password: Paperless user password.
         client:   Optional :class:`httpx.AsyncClient` to reuse.  A new client
-                  is created and closed automatically when not provided.
+                  with :data:`~pypaperless.const.DEFAULT_TIMEOUT` is created
+                  and closed automatically when not provided.
 
     Example::
 
@@ -372,7 +382,7 @@ async def generate_api_token(
 
     """
     external_client = client is not None
-    client = client or httpx.AsyncClient()
+    client = client or httpx.AsyncClient(timeout=DEFAULT_TIMEOUT)
     try:
         url = normalize_base_url(url)
         json_data = {
