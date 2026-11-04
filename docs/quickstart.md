@@ -12,7 +12,7 @@ Install from PyPI:
 pip install pypaperless
 ```
 
-Requires **Python 3.13** or higher.
+Requires **Python 3.12** or higher.
 
 ---
 
