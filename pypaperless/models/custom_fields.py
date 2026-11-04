@@ -1,7 +1,7 @@
 """Provide `CustomField` related models."""
 
 import contextlib
-import datetime
+import datetime as dt
 import re
 from enum import StrEnum
 from typing import Annotated, Any, ClassVar, Literal, Self, TypeVar, overload
@@ -79,17 +79,16 @@ class CustomFieldBooleanValue(CustomFieldValue):
 class CustomFieldDateValue(CustomFieldValue):
     """Represent a date `CustomFieldValue`."""
 
-    value: datetime.date | str | None = None
+    value: dt.date | str | None = None
     data_type: Literal[CustomFieldType.DATE] = Field(default=CustomFieldType.DATE, exclude=True)
 
     @field_validator("value", mode="before")
     @classmethod
-    def _parse_date(cls, v: datetime.date | str | None) -> datetime.date | str | None:
+    def _parse_date(cls, v: dt.date | str | None) -> dt.date | str | None:
         """Convert the value to a date."""
         if isinstance(v, str):
             with contextlib.suppress(ValueError):
-                dt = datetime.datetime.fromisoformat(v)
-                return dt.date()
+                return dt.datetime.fromisoformat(v).date()
         return v
 
 

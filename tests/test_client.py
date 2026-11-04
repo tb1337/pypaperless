@@ -1,6 +1,6 @@
 """Tests for the PaperlessClient client: init, context, requests, URL, token, Page model."""
 
-import datetime
+import datetime as dt
 import json
 import re
 from io import BytesIO
@@ -456,14 +456,14 @@ def test_validate_assignment(api: PaperlessClient) -> None:
 
     class AssignModel(PaperlessModel):
         id: int | None = None
-        created: datetime.date | None = None
+        created: dt.date | None = None
         tags: list[int] | None = None
 
     model = AssignModel.from_data(api.runtime, {"id": 1})
 
     iso_string: Any = "2024-01-15"
     model.created = iso_string  # coerced by pydantic
-    assert model.created == datetime.date(2024, 1, 15)
+    assert model.created == dt.date(2024, 1, 15)
 
     bad_date: Any = "not a date"
     with pytest.raises(ValidationError):
@@ -501,7 +501,7 @@ def test_api_dump(api: PaperlessClient) -> None:
 
     class DumpModel(PaperlessModel):
         id: int | None = None
-        created: datetime.date | None = None
+        created: dt.date | None = None
         sub: SubModel | None = None
         notes_: list[int] | None = Field(default=None, alias="notes", exclude=True)
         hit_: str | None = Field(default=None, alias="__hit__")

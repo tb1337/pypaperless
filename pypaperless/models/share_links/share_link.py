@@ -1,6 +1,6 @@
 """Provide `ShareLink` related models."""
 
-import datetime
+import datetime as dt
 from enum import StrEnum
 from typing import ClassVar, Self
 
@@ -30,8 +30,8 @@ class ShareLink(
     _api_path: ClassVar[str] = EndpointPath.SHARE_LINKS_SINGLE
     _resource: ClassVar[PaperlessResource] = PaperlessResource.SHARE_LINKS
 
-    created: datetime.datetime | None = None
-    expiration: datetime.datetime | None = None
+    created: dt.datetime | None = None
+    expiration: dt.datetime | None = None
     slug: str | None = None
     document: int | None = None
     file_version: ShareLinkFileVersion | None = None
@@ -45,6 +45,6 @@ class ShareLinkDraft(PaperlessModel, mixins.CreatableModel):
 
     _create_required_fields: ClassVar[set[str]] = {"document", "file_version"}
 
-    expiration: datetime.datetime | None = None
+    expiration: dt.datetime | None = None
     document: int | None = None
     file_version: ShareLinkFileVersion | None = None

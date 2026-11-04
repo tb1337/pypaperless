@@ -1,6 +1,6 @@
 """Provide `ShareLinkBundle` related models."""
 
-import datetime
+import datetime as dt
 from enum import StrEnum
 from typing import Any, ClassVar, Self
 
@@ -34,14 +34,14 @@ class ShareLinkBundle(IdentifiedModel):
     _api_path: ClassVar[str] = EndpointPath.SHARE_LINK_BUNDLES_SINGLE
     _resource: ClassVar[PaperlessResource] = PaperlessResource.SHARE_LINK_BUNDLES
 
-    created: datetime.datetime | None = None
-    expiration: datetime.datetime | None = None
+    created: dt.datetime | None = None
+    expiration: dt.datetime | None = None
     slug: str | None = None
     file_version: ShareLinkFileVersion | None = None
     status: ShareLinkBundleStatus | None = None
     size_bytes: int | None = None
     last_error: Any = None
-    built_at: datetime.datetime | None = None
+    built_at: dt.datetime | None = None
     documents: list[int] = Field(default_factory=list)
     document_count: int | None = None
 
