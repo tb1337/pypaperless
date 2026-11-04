@@ -1,14 +1,6 @@
 # Migrating from v5 to v6
 
-## Python version requirement raised to 3.13
-
-v6 drops support for **Python 3.12**. The minimum required version is now **Python 3.13**.
-
-If you are still on Python 3.12, upgrade your runtime before updating pypaperless to v6.
-
----
-
-v6 is also almost a full rewrite of pypaperless. Four things drove it:
+v6 is almost a full rewrite of pypaperless. Four things drove it:
 
 - **Models were too tightly coupled to the HTTP layer.** In v5, every model instance carried a reference to the client and called it directly. That made testing awkward and sharing models between contexts impossible. v6 models are plain data - all I/O goes through services.
 - **No runtime type safety.** v5 used dataclasses with manual dict conversion, so bad API responses would silently produce wrong values. v6 uses Pydantic v2, which validates every response at parse time.

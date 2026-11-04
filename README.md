@@ -61,7 +61,7 @@ asyncio.run(main())
 
 ## Installation
 
-Requires **Python 3.13+**.
+Requires **Python 3.12+**.
 
 ```bash
 pip install pypaperless
@@ -75,7 +75,7 @@ Full documentation is available **[here][docs-url]**.
 
 | **pypaperless** | *Paperless-ngx* | Python | Notes                                   |
 | --------------- | --------------- | ------ | --------------------------------------- |
-| **>= v6.0**     | **>= 3.0**      | 3.13   | Current release                         |
+| **>= v6.0**     | **>= 3.0**      | 3.12   | Current release                         |
 | >= v5.2         | >= 2.19         | 3.12   |                                         |
 | >= v5.0         | >= 2.17         | 3.12   |                                         |
 | >= v4.x         | >= 2.15         | 3.12   |                                         |

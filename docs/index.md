@@ -12,7 +12,7 @@ It is built on top of [httpx](https://www.python-httpx.org/) and [Pydantic](http
 pip install pypaperless
 ```
 
-Requires **Python 3.13+**.
+Requires **Python 3.12+**.
 
 ---
 
