@@ -1,6 +1,6 @@
 """Provide `DocumentVersionInfo` and `DocumentRoot` models."""
 
-import datetime
+import datetime as dt
 from typing import ClassVar
 
 from pypaperless.const import EndpointPath, PaperlessResource
@@ -12,7 +12,7 @@ class DocumentVersionInfo(IdentifiedModel):
 
     _resource: ClassVar[PaperlessResource] = PaperlessResource.DOCUMENTS
 
-    added: datetime.datetime | None = None
+    added: dt.datetime | None = None
     version_label: str | None = None
     checksum: str | None = None
     is_root: bool | None = None

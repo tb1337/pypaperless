@@ -1,6 +1,6 @@
 """Provide `DocumentHistory` related models."""
 
-import datetime
+import datetime as dt
 from enum import StrEnum
 from typing import Any, ClassVar
 
@@ -30,7 +30,7 @@ class DocumentHistory(IdentifiedModel):
     _api_path: ClassVar[str] = EndpointPath.DOCUMENTS_HISTORY
 
     document: int | None = None
-    timestamp: datetime.datetime | None = None
+    timestamp: dt.datetime | None = None
     action: DocumentHistoryAction | None = None
     changes: dict[str, Any] = Field(default_factory=dict)
     actor: DocumentHistoryActor | None = None

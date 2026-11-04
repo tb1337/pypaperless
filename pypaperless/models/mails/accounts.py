@@ -1,6 +1,6 @@
 """Provide `MailAccount` related models."""
 
-import datetime
+import datetime as dt
 from enum import IntEnum
 from typing import ClassVar, Self
 
@@ -51,4 +51,4 @@ class MailAccount(IdentifiedModel, mixins.SecurableModel):
     character_set: str | None = None
     is_token: bool | None = None
     account_type: MailAccountType | None = None
-    expiration: datetime.datetime | None = None
+    expiration: dt.datetime | None = None

@@ -1,6 +1,6 @@
 """Provide `DocumentNote` related models."""
 
-import datetime
+import datetime as dt
 from typing import Any, ClassVar
 
 from pydantic import field_validator
@@ -17,7 +17,7 @@ class DocumentNote(IdentifiedModel):
     _pk_field: ClassVar[str] = "document"
 
     note: str | None = None
-    created: datetime.datetime | None = None
+    created: dt.datetime | None = None
     document: int | None = None
     user: int | None = None
 

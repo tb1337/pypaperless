@@ -1,6 +1,6 @@
 """Tests for the Document service: CRUD, lazy fetch, files, notes, history, custom fields."""
 
-import datetime
+import datetime as dt
 import io
 import json
 import re
@@ -347,7 +347,7 @@ class TestDocuments:
         assert len(results) > 0
         for note in results:
             assert isinstance(note, DocumentNote)
-            assert isinstance(note.created, datetime.datetime)
+            assert isinstance(note.created, dt.datetime)
         with pytest.raises(PrimaryKeyRequiredError):
             item = await paperless.documents.notes()
 
@@ -634,7 +634,7 @@ class TestDocuments:
         for entry in results:
             assert isinstance(entry, DocumentHistory)
             assert entry.document == item.id
-            assert isinstance(entry.timestamp, datetime.datetime)
+            assert isinstance(entry.timestamp, dt.datetime)
             assert isinstance(entry.action, DocumentHistoryAction)
             assert isinstance(entry.changes, dict)
 

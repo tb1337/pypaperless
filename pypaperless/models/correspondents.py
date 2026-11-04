@@ -1,6 +1,6 @@
 """Provide `Correspondent` related models."""
 
-import datetime
+import datetime as dt
 from typing import ClassVar
 
 from pypaperless.const import EndpointPath, PaperlessResource
@@ -22,7 +22,7 @@ class Correspondent(
     slug: str | None = None
     name: str | None = None
     document_count: int | None = None
-    last_correspondence: datetime.date | None = None
+    last_correspondence: dt.date | None = None
 
 
 class CorrespondentDraft(

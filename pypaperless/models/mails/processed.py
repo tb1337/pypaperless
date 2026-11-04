@@ -1,6 +1,6 @@
 """Provide `ProcessedMail` related models."""
 
-import datetime
+import datetime as dt
 from typing import ClassVar
 
 from pypaperless.const import EndpointPath
@@ -17,7 +17,7 @@ class ProcessedMail(IdentifiedModel):
     folder: str | None = None
     uid: str | None = None
     subject: str | None = None
-    received: datetime.datetime | None = None
-    processed: datetime.datetime | None = None
+    received: dt.datetime | None = None
+    processed: dt.datetime | None = None
     status: str | None = None
     error: str | None = None

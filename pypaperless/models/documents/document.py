@@ -1,6 +1,6 @@
 """Provide `Document` related models."""
 
-import datetime
+import datetime as dt
 import json
 from collections.abc import Iterator
 from enum import StrEnum
@@ -57,7 +57,7 @@ class DuplicateDocumentSummary(BaseModel):
 
     id: int | None = None
     title: str | None = None
-    deleted_at: datetime.datetime | None = None
+    deleted_at: dt.datetime | None = None
 
 
 class FileRetrieveMode(StrEnum):
@@ -223,10 +223,10 @@ class Document(
     title: str | None = None
     content: str | None = None
     tags: list[int] | None = None
-    created: datetime.date | None = None
-    modified: datetime.datetime | None = None
-    added: datetime.datetime | None = None
-    deleted_at: datetime.datetime | None = None
+    created: dt.date | None = None
+    modified: dt.datetime | None = None
+    added: dt.datetime | None = None
+    deleted_at: dt.datetime | None = None
     archive_serial_number: int | None = None
     original_file_name: str | None = None
     archived_file_name: str | None = None
@@ -294,7 +294,7 @@ class Document(
         return self._versions
 
     @property
-    def created_date(self) -> datetime.date | None:
+    def created_date(self) -> dt.date | None:
         """Backward compatibility for the removed `created_date` field."""
         return self.created
 
@@ -326,7 +326,7 @@ class DocumentDraft(PaperlessModel, mixins.CreatableModel):
     document: bytes | None = None
     filename: str | None = None
     title: str | None = None
-    created: datetime.datetime | None = None
+    created: dt.datetime | None = None
     correspondent: int | None = None
     document_type: int | None = None
     storage_path: int | None = None
@@ -406,4 +406,4 @@ class DocumentSuggestions(IdentifiedModel):
     tags: list[int] | None = None
     document_types: list[int] | None = None
     storage_paths: list[int] | None = None
-    dates: list[datetime.date] | None = None
+    dates: list[dt.date] | None = None

@@ -1,6 +1,6 @@
 """Provide `Task` related models."""
 
-import datetime
+import datetime as dt
 from enum import StrEnum
 from typing import Any, ClassVar, Self
 
@@ -80,9 +80,9 @@ class Task(IdentifiedModel):
     trigger_source_display: str | None = None
     status: TaskStatus | None = None
     status_display: str | None = None
-    date_created: datetime.datetime | None = None
-    date_started: datetime.datetime | None = None
-    date_done: datetime.datetime | None = None
+    date_created: dt.datetime | None = None
+    date_started: dt.datetime | None = None
+    date_done: dt.datetime | None = None
     duration_seconds: float | None = None
     wait_time_seconds: float | None = None
     input_data: Any = None
@@ -112,9 +112,9 @@ class TaskSummary(BaseModel):
     failure_count: int = 0
     avg_duration_seconds: float | None = None
     avg_wait_time_seconds: float | None = None
-    last_run: datetime.datetime | None = None
-    last_success: datetime.datetime | None = None
-    last_failure: datetime.datetime | None = None
+    last_run: dt.datetime | None = None
+    last_success: dt.datetime | None = None
+    last_failure: dt.datetime | None = None
 
 
 class TaskStatusCounts(BaseModel):
