@@ -24,7 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "httpx>=0.28.1",
+    "httpx>=0.29.0",
     "pydantic>=2.14.4",
     "pydantic-settings>=2.16.3",
 ]
